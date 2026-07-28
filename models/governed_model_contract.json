@@ -1,0 +1,20 @@
+{
+  "features": [
+    "Type",
+    "Air temperature [K]",
+    "Process temperature [K]",
+    "Rotational speed [rpm]",
+    "Torque [Nm]",
+    "Tool wear [min]",
+    "Temperature difference [K]",
+    "Mechanical power [W]",
+    "Torque \u00d7 tool wear"
+  ],
+  "model": "RandomForestClassifier",
+  "n_estimators": 500,
+  "min_samples_leaf": 2,
+  "class_weight": "balanced_subsample",
+  "threshold": 0.19726999852394547,
+  "primary_metric": "PR-AUC",
+  "frozen_before_test": true
+}

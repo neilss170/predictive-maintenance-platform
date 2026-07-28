@@ -1,0 +1,14 @@
+{
+  "random_state": 2026,
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "stratified": true,
+  "target": "Machine failure",
+  "positive_class": 1,
+  "prediction_point": "after current measurements, before failure outcome",
+  "test_policy": "sealed until pipeline, hyperparameters, features, and threshold are frozen",
+  "historical_caveat": "Earlier project iterations inspected this dataset; this is a governance reset, not a truly external test."
+}

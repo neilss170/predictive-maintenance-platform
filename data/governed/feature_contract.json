@@ -1,0 +1,24 @@
+{
+  "features": [
+    "Type",
+    "Air temperature [K]",
+    "Process temperature [K]",
+    "Rotational speed [rpm]",
+    "Torque [Nm]",
+    "Tool wear [min]",
+    "Temperature difference [K]",
+    "Mechanical power [W]",
+    "Torque \u00d7 tool wear"
+  ],
+  "leakage_excluded": [
+    "TWF",
+    "HDF",
+    "PWF",
+    "OSF",
+    "RNF"
+  ],
+  "identifiers_excluded": [
+    "UDI",
+    "Product ID"
+  ]
+}
