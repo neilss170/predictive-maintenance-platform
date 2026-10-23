@@ -14,7 +14,8 @@
   "n_estimators": 500,
   "min_samples_leaf": 2,
   "class_weight": "balanced_subsample",
-  "threshold": 0.19726999852394547,
+  "threshold": 0.48330825410539285,
   "primary_metric": "PR-AUC",
-  "frozen_before_test": true
+  "frozen_before_test": true,
+  "threshold_selection": "highest-precision out-of-fold training threshold with recall >= 0.80 (notebook 04, cell 18)"
 }
