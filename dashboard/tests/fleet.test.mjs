@@ -43,3 +43,22 @@ test("separates malformed and duplicate rows", () => {
   assert.equal(result.invalid.length, 1);
   assert.ok(result.invalid[0].errors.length >= 3);
 });
+
+test("risk bands stay reachable at any threshold", async () => {
+  const { riskLevel } = await import("../src/risk.js");
+  for (const threshold of [0.016, 0.2, 0.483, 0.9]) {
+    const labels = [0, threshold * 0.75, threshold + 0.001, 0.9999].map((p) => riskLevel(p, threshold).label);
+    assert.deepEqual(labels, ["Low", "Watch", "High", "Critical"], `threshold ${threshold}`);
+  }
+});
+
+test("cost policy picks the curve row for a ratio and clamps out-of-range ratios", async () => {
+  const { policyForRatio, testCost } = await import("../src/risk.js");
+  const curve = JSON.parse(readFileSync(path.join(root, "public/cost-curve.json"), "utf-8"));
+  assert.equal(policyForRatio(curve, 20).ratio, 20);
+  assert.equal(policyForRatio(curve, 0).ratio, 1);
+  assert.equal(policyForRatio(curve, 500).ratio, 100);
+  const row = policyForRatio(curve, 20);
+  assert.equal(testCost(row, 20), row.test_cost);
+  assert.ok(curve.frozen.missed_failures + curve.frozen.flagged > 0);
+});

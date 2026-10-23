@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { invalidToCsv, resultsToCsv, validateFleetCsv } from "./fleet.js";
+import { riskLevel } from "./risk.js";
 
 const PAGE_SIZE = 25;
 
@@ -17,7 +18,7 @@ function Summary({ label, value, tone = "" }) {
   return <div className={`fleet-summary ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function FleetAssessment({ model, scoreInputs, onOpenMachine }) {
+export function FleetAssessment({ threshold, scoreInputs, onOpenMachine }) {
   const [fleet, setFleet] = useState(null);
   const [error, setError] = useState("");
   const [filename, setFilename] = useState("");
@@ -43,23 +44,28 @@ export function FleetAssessment({ model, scoreInputs, onOpenMachine }) {
     }
   }
 
+  // Probabilities are scored once on upload; decisions follow the active threshold.
+  const rows = useMemo(() => (fleet?.valid || []).map((row) => ({
+    ...row, flagged: row.probability >= threshold, risk: riskLevel(row.probability, threshold),
+  })), [fleet, threshold]);
+
   const filtered = useMemo(() => {
     if (!fleet) return [];
-    return fleet.valid
+    return rows
       .filter((row) => row.machineId.toLowerCase().includes(search.toLowerCase()))
       .filter((row) => riskFilter === "All" || row.risk.label === riskFilter)
       .filter((row) => !flaggedOnly || row.flagged)
       .sort((a, b) => sortDirection === "desc" ? b.probability - a.probability : a.probability - b.probability);
-  }, [fleet, search, riskFilter, flaggedOnly, sortDirection]);
+  }, [fleet, rows, search, riskFilter, flaggedOnly, sortDirection]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visibleRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const counts = fleet?.valid.reduce((summary, row) => {
+  const counts = rows.reduce((summary, row) => {
     summary[row.risk.label] = (summary[row.risk.label] || 0) + 1;
     return summary;
-  }, {}) || {};
-  const averageRisk = fleet?.valid.length ? fleet.valid.reduce((sum, row) => sum + row.probability, 0) / fleet.valid.length : 0;
-  const flagged = fleet?.valid.filter((row) => row.flagged).length || 0;
+  }, {});
+  const averageRisk = rows.length ? rows.reduce((sum, row) => sum + row.probability, 0) / rows.length : 0;
+  const flagged = rows.filter((row) => row.flagged).length;
 
   function resetFilters() {
     setSearch(""); setRiskFilter("All"); setFlaggedOnly(false); setPage(1);
@@ -69,7 +75,7 @@ export function FleetAssessment({ model, scoreInputs, onOpenMachine }) {
     <section className="fleet-panel">
       <div className="fleet-intro">
         <div><p className="eyebrow">Fleet assessment</p><h2>Score and prioritize multiple machines</h2><p>Upload leakage-free operating observations. Processing stays in your browser and Machine ID is never passed to the model.</p></div>
-        <a className="sample-link" href="/sample-fleet.csv" download>Download sample CSV</a>
+        <a className="sample-link" href={`${import.meta.env.BASE_URL}sample-fleet.csv`} download>Download sample CSV</a>
       </div>
 
       <label className="drop-zone">

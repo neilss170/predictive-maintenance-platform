@@ -1162,3 +1162,26 @@ footer p {
   .rul-readout, .sensor-grid { grid-template-columns: 1fr; }
   .rul-readout strong { font-size: 22px; }
 }
+
+.cost-policy {
+  margin-bottom: 20px;
+  padding: 22px 26px;
+  border: 1px solid #d2dbd6;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 50px rgba(31, 54, 47, 0.06);
+}
+.cost-policy-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.cost-policy-heading h2 { margin: 0; }
+.cost-policy .band-filter { margin: 0; }
+.cost-slider { display: block; margin-top: 16px; }
+.cost-slider > span:first-child { display: block; margin-bottom: 6px; color: #42534d; font-size: 14px; }
+.cost-slider .range-input { width: 100%; }
+.cost-outcomes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+.cost-outcomes .fleet-summary strong { font-variant-numeric: tabular-nums; }
+.cost-policy .scoring-note { margin: 12px 0 0; }
+
+@media (max-width: 680px) {
+  .cost-policy { padding: 18px 16px; }
+  .cost-outcomes { grid-template-columns: repeat(2, 1fr); }
+}

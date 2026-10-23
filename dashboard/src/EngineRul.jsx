@@ -70,7 +70,7 @@ export function EngineRul() {
   const [bandFilter, setBandFilter] = useState("all");
 
   useEffect(() => {
-    fetch("/rul-fleet.json")
+    fetch(`${import.meta.env.BASE_URL}rul-fleet.json`)
       .then((response) => {
         if (!response.ok) throw new Error("Turbofan fleet data could not be loaded.");
         return response.json();

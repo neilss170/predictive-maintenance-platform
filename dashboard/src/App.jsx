@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { CostPolicy } from "./CostPolicy.jsx";
 import { EngineRul } from "./EngineRul.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
+import { policyForRatio, riskLevel } from "./risk.js";
 
 const DEFAULT_INPUTS = {
   type: "L",
@@ -60,18 +62,11 @@ function scoreForest(vector, model) {
   return probability / model.trees.length;
 }
 
-function calculateResult(inputs, model) {
+function calculateResult(inputs, model, threshold) {
   if (!inputs || !model) return null;
   const transformed = transformInputs(inputs, model);
   const probability = scoreForest(transformed.vector, model);
-  return { ...transformed, probability, flagged: probability >= model.decisionThreshold };
-}
-
-function riskLevel(probability, threshold) {
-  if (probability < threshold * 0.5) return { label: "Low", className: "low" };
-  if (probability < threshold) return { label: "Watch", className: "watch" };
-  if (probability < Math.max(threshold * 2.5, 0.5)) return { label: "High", className: "high" };
-  return { label: "Critical", className: "critical" };
+  return { ...transformed, probability, flagged: probability >= threshold };
 }
 
 function Metric({ label, value }) {
@@ -105,9 +100,15 @@ export function App() {
   });
   const [showHistory, setShowHistory] = useState(false);
   const [view, setView] = useState("single");
+  const [costCurve, setCostCurve] = useState(null);
+  const [policy, setPolicy] = useState({ mode: "frozen", ratio: 10 });
 
   useEffect(() => {
-    fetch("/model.json")
+    fetch(`${import.meta.env.BASE_URL}cost-curve.json`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then(setCostCurve)
+      .catch(() => setCostCurve(null));
+    fetch(`${import.meta.env.BASE_URL}model.json`)
       .then((response) => {
         if (!response.ok) throw new Error("Model asset could not be loaded.");
         return response.json();
@@ -124,8 +125,11 @@ export function App() {
     }
   }, [history]);
 
-  const result = useMemo(() => calculateResult(scoredInputs, model), [scoredInputs, model]);
-  const baselineResult = useMemo(() => calculateResult(baseline, model), [baseline, model]);
+  const threshold = model
+    ? policy.mode === "cost" && costCurve ? policyForRatio(costCurve, policy.ratio).threshold : model.decisionThreshold
+    : 0;
+  const result = useMemo(() => calculateResult(scoredInputs, model, threshold), [scoredInputs, model, threshold]);
+  const baselineResult = useMemo(() => calculateResult(baseline, model, threshold), [baseline, model, threshold]);
 
   function updateField(name, value) {
     setInputs((current) => ({ ...current, [name]: name === "type" ? value : Number(value) }));
@@ -144,8 +148,8 @@ export function App() {
   }
 
   const probabilityPercent = result ? result.probability * 100 : 0;
-  const thresholdPercent = model ? model.decisionThreshold * 100 : 0;
-  const currentRisk = result && model ? riskLevel(result.probability, model.decisionThreshold) : null;
+  const thresholdPercent = threshold * 100;
+  const currentRisk = result && model ? riskLevel(result.probability, threshold) : null;
   const comparison = baselineResult && result ? (result.probability - baselineResult.probability) * 100 : null;
   const hasPendingChanges = JSON.stringify(inputs) !== JSON.stringify(scoredInputs);
 
@@ -191,13 +195,12 @@ export function App() {
           <button className={view === "rul" ? "active" : ""} type="button" onClick={() => setView("rul")}>Engine RUL</button>
         </nav>
 
+        {view !== "rul" && <CostPolicy curve={costCurve} policy={policy} onChange={setPolicy} />}
+
         {view === "fleet" && (model ? (
           <FleetAssessment
-            model={model}
-            scoreInputs={(machineInputs) => {
-              const scored = calculateResult(machineInputs, model);
-              return { ...scored, risk: riskLevel(scored.probability, model.decisionThreshold) };
-            }}
+            threshold={threshold}
+            scoreInputs={(machineInputs) => ({ probability: calculateResult(machineInputs, model, threshold).probability })}
             onOpenMachine={openFleetMachine}
           />
         ) : <div className="fleet-loading">Loading fleet scoring model...</div>)}
