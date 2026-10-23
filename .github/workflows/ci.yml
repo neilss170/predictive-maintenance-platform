@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-api.txt httpx==0.28.1 matplotlib==3.11.1 pytest==9.1.1 shap==0.51.0
+      - run: python -m pytest -q
+      - name: Browser model matches sklearn
+        run: python validate_web_model.py
+
+  dashboard:
+    name: Dashboard tests and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: API container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t pm-platform .
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 8000:8000 pm-platform
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 1; done
+          curl -sf -X POST "localhost:8000/v1/failure-risk?cost_ratio=20" \
+            -H 'content-type: application/json' \
+            -d '{"type":"L","air_temperature":300.7,"process_temperature":310.5,"rotational_speed":1370,"torque":65,"tool_wear":220}'
+          docker rm -f api
