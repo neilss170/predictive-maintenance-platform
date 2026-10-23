@@ -103,6 +103,11 @@ export function App() {
     setInputs((current) => ({ ...current, [name]: name === "type" ? value : Number(value) }));
   }
 
+  // History lives on the single-machine view, above the fold edge: bring it into sight when opened.
+  useEffect(() => {
+    if (showHistory) document.querySelector(".history-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showHistory, history.length]);
+
   function dismissWelcome() {
     setWelcomeDismissed(true);
     try { localStorage.setItem("pm-welcome-dismissed", "1"); } catch {
@@ -152,7 +157,7 @@ export function App() {
         </div>
         <div className="topbar-actions">
           <button className="history-button" type="button" onClick={startTour}>Tour</button>
-          <button className="history-button" type="button" onClick={() => setShowHistory((value) => !value)}>
+          <button className="history-button" type="button" aria-expanded={showHistory && view === "single"} onClick={() => { setShowHistory((open) => !open || view !== "single"); setView("single"); }}>
             History <span>{history.length}</span>
           </button>
           <span className="benchmark-badge">AI4I + NASA C-MAPSS</span>
