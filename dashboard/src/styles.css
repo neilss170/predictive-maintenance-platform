@@ -1344,3 +1344,6 @@ footer p {
   .view-tabs { display: grid; grid-template-columns: 1fr 1fr; }
   .view-tabs button { padding: 10px 8px; }
 }
+.rul-chart path.range { fill: #245c4c; opacity: 0.13; stroke: none; }
+.rul-legend i.range { height: 10px; background: rgba(36, 92, 76, 0.16); }
+.rul-readout small .info-tip { margin-left: 3px; }

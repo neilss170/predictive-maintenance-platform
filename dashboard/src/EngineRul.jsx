@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { BAND_LABELS, bandClass, bandFor, countBands, linePath, summarizeEngines } from "./rulFleet.js";
+import { InfoTip } from "./InfoTip.jsx";
+import { BAND_LABELS, bandClass, bandFor, bandPath, countBands, linePath, rulRange, summarizeEngines } from "./rulFleet.js";
 
 const CHART = { width: 720, height: 300, left: 44, right: 16, top: 16, bottom: 34 };
 const SENSORS = [
@@ -8,11 +9,11 @@ const SENSORS = [
   { key: "sensor_15", label: "Sensor 15 · bypass ratio" },
 ];
 
-function Summary({ label, value, tone = "" }) {
-  return <div className={`fleet-summary ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
+function Summary({ label, value, tone = "", term }) {
+  return <div className={`fleet-summary ${tone}`}><span>{label}{term && <InfoTip term={term} />}</span><strong>{value}</strong></div>;
 }
 
-function RulChart({ engine, cursor, rulCap, riskBands }) {
+function RulChart({ engine, cursor, rulCap, riskBands, interval }) {
   const lastCycle = engine.cycles[engine.cycles.length - 1];
   const yMax = Math.max(rulCap + 20, Math.min(engine.actual[0], 260));
   const innerW = CHART.width - CHART.left - CHART.right;
@@ -38,6 +39,7 @@ function RulChart({ engine, cursor, rulCap, riskBands }) {
       ))}
       <text className="axis" x={CHART.left} y={CHART.height - 8}>cycle 1</text>
       <text className="axis" x={CHART.width - CHART.right} y={CHART.height - 8} textAnchor="end">cycle {lastCycle}</text>
+      {interval && <path className="range" d={bandPath(engine.cycles.slice(0, cursor + 1), engine.predicted.slice(0, cursor + 1), interval, scale)} />}
       <path className="series actual" d={linePath(engine.cycles, engine.actual, scale)} />
       <path className="series predicted" d={linePath(engine.cycles.slice(0, cursor + 1), engine.predicted.slice(0, cursor + 1), scale)} />
       <line className="cursor" x1={cursorX} x2={cursorX} y1={CHART.top} y2={CHART.top + innerH} />
@@ -112,6 +114,7 @@ export function EngineRul() {
   const predicted = engine.predicted[cursor];
   const actual = engine.actual[cursor];
   const band = bandFor(predicted, riskBands);
+  const range = metrics.interval ? rulRange(predicted, metrics.interval) : null;
   const visible = summaries.filter((row) => bandFilter === "all" || row.band === bandFilter);
 
   function play() {
@@ -133,10 +136,11 @@ export function EngineRul() {
       </div>
 
       <div className="fleet-summaries">
-        <Summary label="Test RMSE (cycles)" value={`${metrics.rmse.toFixed(1)}`} />
-        <Summary label="95% interval" value={`${metrics.rmse_95ci[0].toFixed(1)}–${metrics.rmse_95ci[1].toFixed(1)}`} />
-        <Summary label={`≤${metrics.alarm.alarm_cycles}-cycle alarm recall`} value={`${Math.round(metrics.alarm.recall * 100)}%`} tone="warning" />
-        <Summary label="Alarm precision" value={`${Math.round(metrics.alarm.precision * 100)}%`} tone="critical" />
+        <Summary label="Test RMSE (cycles)" value={`${metrics.rmse.toFixed(1)}`} term="rmse" />
+        <Summary label="RMSE 95% interval" value={`${metrics.rmse_95ci[0].toFixed(1)}–${metrics.rmse_95ci[1].toFixed(1)}`} term="interval" />
+        <Summary label={`≤${metrics.alarm.alarm_cycles}-cycle alarm recall`} value={`${Math.round(metrics.alarm.recall * 100)}%`} tone="warning" term="alarmRecall" />
+        <Summary label="Alarm precision" value={`${Math.round(metrics.alarm.precision * 100)}%`} tone="critical" term="alarmPrecision" />
+        {metrics.interval && <Summary label={`${Math.round(metrics.interval.level * 100)}% range hit rate`} value={`${Math.round(metrics.interval.test_coverage * 100)}%`} term="rulRange" />}
       </div>
 
       <div className="rul-layout">
@@ -150,15 +154,16 @@ export function EngineRul() {
           </div>
 
           <div className="rul-readout">
-            <div><span>Predicted RUL</span><strong>{predicted.toFixed(0)}</strong><small>cycles</small></div>
+            <div><span>Predicted RUL</span><strong>{predicted.toFixed(0)}</strong><small>{range ? <>likely {range.low.toFixed(0)}–{range.high.toFixed(0)} cycles <InfoTip term="rulRange" /></> : "cycles"}</small></div>
             <div><span>True RUL</span><strong>{actual}</strong><small>cycles</small></div>
             <div><span>Error</span><strong className={predicted - actual > 0 ? "worsened" : "improved"}>{predicted - actual > 0 ? "+" : ""}{(predicted - actual).toFixed(0)}</strong><small>{predicted - actual > 0 ? "late (riskier)" : "early (safer)"}</small></div>
           </div>
 
-          <RulChart engine={engine} cursor={cursor} rulCap={rulCap} riskBands={riskBands} />
+          <RulChart engine={engine} cursor={cursor} rulCap={rulCap} riskBands={riskBands} interval={metrics.interval} />
           <div className="rul-legend">
             <span><i className="predicted" />Predicted</span>
             <span><i className="actual" />True RUL</span>
+            {metrics.interval && <span><i className="range" />Likely range ({Math.round(metrics.interval.level * 100)}%)</span>}
             <span><i className="warning" />Warning ≤{riskBands.warning}</span>
             <span><i className="severe" />Severe ≤{riskBands.severe}</span>
           </div>

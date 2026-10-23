@@ -41,3 +41,16 @@ test("line paths clamp values to the chart ceiling", () => {
   const scale = { yMax: 100, x: (cycle) => cycle, y: (rul) => 100 - rul };
   assert.equal(linePath([1, 2], [50, 400], scale), "M1.0,50.0L2.0,0.0");
 });
+
+test("likely range brackets the forecast and widens for healthier engines", async () => {
+  const { rulRange } = await import("../src/rulFleet.js");
+  const { interval } = fleet.metrics;
+  assert.equal(interval.level, 0.8);
+  const near = rulRange(10, interval);
+  const far = rulRange(120, interval);
+  assert.ok(near.low <= 10 && near.high >= 10);
+  assert.ok(near.low >= 0);
+  assert.ok(far.high - far.low > near.high - near.low);
+  // On the official test engines the range held the truth at least as often as promised.
+  assert.ok(interval.test_coverage >= 0.8);
+});

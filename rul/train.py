@@ -46,6 +46,8 @@ RISK_BANDS = {"severe": 30, "warning": 70}  # predicted RUL at or below each bou
 BASELINES = {"Mean baseline", "Ridge regression", "Random forest"}
 MIN_OBSERVED_CYCLES = 31  # shortest history in test_FD001
 TRUNCATIONS_PER_ENGINE = 5
+INTERVAL_LEVEL = 0.8  # central share of out-of-fold errors the RUL range covers
+INTERVAL_EDGES = [30, 60, 90, RUL_CAP]  # forecast buckets (upper bounds, cycles)
 
 
 def candidates() -> dict:
@@ -120,6 +122,45 @@ def cross_validate(train: pd.DataFrame, features: list[str]) -> pd.DataFrame:
             f"   test-like cut-offs {np.mean(fold_cut_rmse):6.2f} ± {np.std(fold_cut_rmse):.2f}"
         )
     return pd.DataFrame(rows).sort_values("cv_rmse_mean").reset_index(drop=True)
+
+
+def prediction_intervals(estimator, train: pd.DataFrame, features: list[str]) -> list[dict]:
+    """Error ranges per forecast bucket, from out-of-fold predictions.
+
+    Every training engine is predicted by a model that never saw it, at cycles
+    a test engine could be observed at. The range for a forecast is the middle
+    INTERVAL_LEVEL of true-minus-predicted errors (against uncapped RUL) for
+    forecasts in the same bucket.
+    """
+    X, y = train[features], train["rul_capped"]
+    oof = np.zeros(len(train))
+    for train_idx, valid_idx in GroupKFold(n_splits=5).split(X, y, train["unit"]):
+        model = clone(estimator).fit(X.iloc[train_idx], y.iloc[train_idx])
+        oof[valid_idx] = np.clip(model.predict(X.iloc[valid_idx]), 0, RUL_CAP)
+    eligible = (train["cycle"] >= MIN_OBSERVED_CYCLES).to_numpy()
+    pred, error = oof[eligible], (train["rul"].to_numpy() - oof)[eligible]
+    tail = (1 - INTERVAL_LEVEL) / 2
+    buckets, lower = [], 0.0
+    for upper in INTERVAL_EDGES:
+        in_bucket = (pred >= lower) & (pred <= upper if upper == INTERVAL_EDGES[-1] else pred < upper)
+        buckets.append({
+            "up_to": upper,
+            "low": float(np.quantile(error[in_bucket], tail)),
+            "high": float(np.quantile(error[in_bucket], 1 - tail)),
+            "rows": int(in_bucket.sum()),
+        })
+        lower = upper
+    return buckets
+
+
+def interval_for(prediction, buckets: list[dict]) -> tuple[np.ndarray, np.ndarray]:
+    """Range around each forecast, interpolating bucket error offsets between bucket centres."""
+    prediction = np.asarray(prediction, dtype=float)
+    lowers = [0] + [b["up_to"] for b in buckets[:-1]]
+    centres = [(lo + b["up_to"]) / 2 for lo, b in zip(lowers, buckets)]
+    low = np.interp(prediction, centres, [b["low"] for b in buckets])
+    high = np.interp(prediction, centres, [b["high"] for b in buckets])
+    return np.maximum(prediction + low, 0), prediction + high
 
 
 def bootstrap_intervals(y_true, y_pred, metrics: dict, n=2000) -> dict:
@@ -229,6 +270,9 @@ def main() -> None:
         "alarm_precision": alarm_precision, "alarm_recall": alarm_recall,
     })
     selected_cv = comparison.set_index("model").loc[best_name]
+    buckets = prediction_intervals(candidates()[best_name], train, features)
+    low, high = interval_for(best_prediction, buckets)
+    truth = last["rul"].to_numpy()
     metrics = {
         "model": best_name,
         "test_engines": int(len(last)),
@@ -244,6 +288,12 @@ def main() -> None:
             "precision_95ci": intervals["alarm_precision"],
             "recall_95ci": intervals["alarm_recall"],
         },
+        "interval": {
+            "level": INTERVAL_LEVEL,
+            "buckets": buckets,
+            "test_coverage": float(np.mean((truth >= low) & (truth <= high))),
+            "test_mean_width": float(np.mean(high - low)),
+        },
         "baselines": {name: rows["official"] for name, rows in test_rows.items() if name in BASELINES},
         # Scored on test for transparency only; selection used CV alone.
         "other_candidates": {
@@ -257,6 +307,10 @@ def main() -> None:
     print(f"  MAE  {official['mae']:.2f}  (95% CI {metrics['mae_95ci'][0]:.2f}-{metrics['mae_95ci'][1]:.2f})")
     print(f"  NASA score {official['nasa_score']:.0f}")
     print(f"  RMSE vs truth capped at {RUL_CAP}: {metrics['capped_truth']['rmse']:.2f}")
+    interval = metrics["interval"]
+    print(f"  {INTERVAL_LEVEL:.0%} range: covers {interval['test_coverage']:.0%} of test engines, mean width {interval['test_mean_width']:.0f} cycles")
+    for b in buckets:
+        print(f"    forecast <= {b['up_to']:>3}: {b['low']:+6.1f} to {b['high']:+6.1f}  ({b['rows']} rows)")
     alarm = metrics["alarm"]
     print(
         f"  {ALARM_CYCLES}-cycle alarm: precision {alarm['precision']:.2f} "
@@ -280,7 +334,7 @@ def main() -> None:
         "frozen_before_test": True,
     }, indent=2), encoding="utf-8")
     METRICS_PATH.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-    export_web_fleet(model, test, features, {k: metrics[k] for k in ["model", "rmse", "mae", "nasa_score", "rmse_95ci", "alarm"]})
+    export_web_fleet(model, test, features, {k: metrics[k] for k in ["model", "rmse", "mae", "nasa_score", "rmse_95ci", "alarm", "interval"]})
 
 
 if __name__ == "__main__":
