@@ -1347,3 +1347,19 @@ footer p {
 .rul-chart path.range { fill: #245c4c; opacity: 0.13; stroke: none; }
 .rul-legend i.range { height: 10px; background: rgba(36, 92, 76, 0.16); }
 .rul-readout small .info-tip { margin-left: 3px; }
+
+/* ---- Welcome banner and tour ---- */
+.welcome { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; padding: 14px 18px; border: 1px solid #cfe3d9; border-radius: 14px; background: #eef6f2; color: #22362f; font-size: 14px; }
+.welcome .primary-button { width: auto; margin: 0; padding: 9px 16px; }
+.tour { position: fixed; inset: 0; z-index: 100; }
+.tour-backdrop { position: fixed; inset: 0; background: rgba(15, 26, 23, 0.55); }
+.tour-spotlight { position: fixed; border-radius: 16px; box-shadow: 0 0 0 9999px rgba(15, 26, 23, 0.55); transition: all 200ms ease; pointer-events: none; }
+.tour-card { position: fixed; width: 360px; padding: 20px 22px; border-radius: 16px; background: white; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25); outline: none; }
+.tour-card:not([style*="top"]) { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.tour-card.docked { top: auto !important; right: 12px; bottom: 12px; left: 12px !important; width: auto; transform: none; }
+.tour-card h2 { margin: 4px 0 8px; font-size: 19px; }
+.tour-card p:not(.eyebrow) { margin: 0; color: #42534d; font-size: 14px; line-height: 1.55; }
+.tour-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.tour-actions > div { display: flex; gap: 8px; }
+.tour-actions .primary-button, .tour-actions .secondary-button { width: auto; margin: 0; padding: 9px 16px; }
+.welcome .primary-button, .tour-actions .primary-button, .tour-actions .secondary-button { min-height: 0; }

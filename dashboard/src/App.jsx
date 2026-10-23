@@ -7,6 +7,7 @@ import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, threshol
 import { InfoTip } from "./InfoTip.jsx";
 import { ModelPerformance } from "./ModelPerformance.jsx";
 import { riskLevel } from "./risk.js";
+import { Tour } from "./Tour.jsx";
 
 const DEFAULT_INPUTS = SCENARIOS[0].inputs;
 
@@ -42,6 +43,10 @@ export function App() {
   const [view, setView] = useState("single");
   const [costCurve, setCostCurve] = useState(null);
   const [policy, setPolicy] = useState(DEFAULT_POLICY);
+  const [touring, setTouring] = useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => {
+    try { return localStorage.getItem("pm-welcome-dismissed") === "1"; } catch { return false; }
+  });
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}cost-curve.json`)
@@ -81,6 +86,23 @@ export function App() {
     setInputs((current) => ({ ...current, [name]: name === "type" ? value : Number(value) }));
   }
 
+  function dismissWelcome() {
+    setWelcomeDismissed(true);
+    try { localStorage.setItem("pm-welcome-dismissed", "1"); } catch {
+      // Storage may be unavailable; the banner just returns next visit.
+    }
+  }
+
+  function startTour() {
+    dismissWelcome();
+    setTouring(true);
+  }
+
+  // The tour walks the single-machine view; switch to it for steps that live there.
+  const prepareTourStep = useCallback((target) => {
+    if (target !== "tabs") setView("single");
+  }, []);
+
   function saveAssessment() {
     if (!result) return;
     setHistory((current) => [{
@@ -112,6 +134,7 @@ export function App() {
           <div><p>Reliability Lab</p><strong>Predictive Maintenance</strong></div>
         </div>
         <div className="topbar-actions">
+          <button className="history-button" type="button" onClick={startTour}>Tour</button>
           <button className="history-button" type="button" onClick={() => setShowHistory((value) => !value)}>
             History <span>{history.length}</span>
           </button>
@@ -132,6 +155,16 @@ export function App() {
             <Metric label="30-cycle alarm recall" value="92%" term="alarmRecall" />
           </div>
         </section>
+
+        {!welcomeDismissed && (
+          <div className="welcome" role="note">
+            <div><strong>New here?</strong> Take a one-minute tour: what each view does, how to set costs, and how to read a score.</div>
+            <div className="inline-actions">
+              <button type="button" className="primary-button" onClick={startTour}>Take the tour</button>
+              <button type="button" className="text-button" onClick={dismissWelcome}>Dismiss</button>
+            </div>
+          </div>
+        )}
 
         <nav className="view-tabs" aria-label="Dashboard views" data-tour="tabs">
           <button className={view === "single" ? "active" : ""} type="button" onClick={() => setView("single")}>Single machine</button>
@@ -303,6 +336,7 @@ export function App() {
         </section>
         )}
       </main>
+      <Tour open={touring} onClose={() => setTouring(false)} onBeforeStep={prepareTourStep} />
       <footer><p>Predictive Maintenance Risk Console</p><p>Benchmark demonstration • Model decisions require human review</p></footer>
     </div>
   );
