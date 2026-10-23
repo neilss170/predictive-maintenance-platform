@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from fastapi.testclient import TestClient
@@ -49,6 +50,12 @@ class ApiTests(unittest.TestCase):
     def test_failure_risk_rejects_leakage_columns(self):
         response = self.client.post("/v1/failure-risk", json={**HEALTHY, "TWF": 0})
         self.assertEqual(response.status_code, 422)
+
+    def test_failure_risk_rejects_non_finite_and_absurd_values(self):
+        for value in ["NaN", "Infinity", "1e308"]:
+            body = json.dumps({**HEALTHY, "torque": 0}).replace('"torque": 0', f'"torque": {value}')
+            response = self.client.post("/v1/failure-risk", content=body, headers={"content-type": "application/json"})
+            self.assertEqual(response.status_code, 422, value)
 
     def test_failure_risk_rejects_unknown_type(self):
         response = self.client.post("/v1/failure-risk", json={**HEALTHY, "type": "X"})

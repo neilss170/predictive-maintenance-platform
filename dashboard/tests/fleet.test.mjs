@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { parseCsv, validateFleetCsv } from "../src/fleet.js";
+import { invalidToCsv, parseCsv, resultsToCsv, validateFleetCsv } from "../src/fleet.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sample = readFileSync(path.join(root, "public", "sample-fleet.csv"), "utf8");
@@ -77,4 +77,13 @@ test("band explanations cover exactly the bands riskLevel assigns", async () => 
   const { riskLevel, riskMeanings } = await import("../src/risk.js");
   const labels = [0, 0.3, 0.6, 0.99].map((p) => riskLevel(p, 0.483).label);
   assert.deepEqual(Object.keys(riskMeanings(0.483)), labels);
+});
+
+test("exports neutralise spreadsheet formulas and uploads reject non-decimal numbers", () => {
+  const header = "Machine ID,Type,Air temperature [K],Process temperature [K],Rotational speed [rpm],Torque [Nm],Tool wear [min]";
+  const result = validateFleetCsv(`${header}\n=1+1,L,298,308,1500,40,10\n@x,L,298,308,0x5DC,40,10`, () => ({ probability: 0.5 }));
+  assert.equal(result.invalid[0].errors[0], "Rotational speed [rpm] must be numeric");
+  const exported = resultsToCsv(result.valid.map((row) => ({ ...row, risk: { label: "High" }, flagged: true })));
+  assert.ok(exported.includes(`"'=1+1"`));
+  assert.ok(invalidToCsv(result.invalid).includes(`"'@x"`));
 });

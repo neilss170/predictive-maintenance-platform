@@ -78,7 +78,7 @@ export function validateFleetCsv(text, scoreInputs) {
     const inputs = { type };
     for (const [column, name, min, max] of numericRules) {
       const value = Number(record[column]);
-      if (record[column] === "" || !Number.isFinite(value)) errors.push(`${column} must be numeric`);
+      if (!DECIMAL.test(record[column]) || !Number.isFinite(value)) errors.push(`${column} must be numeric`);
       else if (value < min || value > max) errors.push(`${column} must be between ${min} and ${max}`);
       inputs[name] = value;
     }
@@ -88,6 +88,17 @@ export function validateFleetCsv(text, scoreInputs) {
   return { valid, invalid, totalRows: records.length };
 }
 
+const DECIMAL = /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i;
+
+// Characters that make spreadsheets treat a cell as a formula (tab and carriage return too).
+const FORMULA_START = ["=", "+", "-", "@", String.fromCharCode(9), String.fromCharCode(13)];
+
+// Quote a cell, and stop spreadsheets running it as a formula (CSV injection).
+function csvCell(value) {
+  const text = String(value);
+  return `"${(FORMULA_START.includes(text[0]) ? `'${text}` : text).replaceAll('"', '""')}"`;
+}
+
 export function resultsToCsv(rows) {
   const header = [...REQUIRED_COLUMNS, "Failure probability", "Risk level", "Review required", "Recommended action"];
   const body = rows.map((row) => [
@@ -95,12 +106,12 @@ export function resultsToCsv(rows) {
     row.inputs.rotationalSpeed, row.inputs.torque, row.inputs.toolWear,
     row.probability.toFixed(6), row.risk.label, row.flagged ? "Yes" : "No",
     row.flagged ? "Engineering inspection" : "Routine monitoring",
-  ].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","));
+  ].map(csvCell).join(","));
   return [header.join(","), ...body].join("\n");
 }
 
 export function invalidToCsv(rows) {
   return ["Row,Machine ID,Validation errors", ...rows.map((row) =>
-    `${row.rowNumber},"${row.machineId.replaceAll('"', '""')}","${row.errors.join("; ").replaceAll('"', '""')}"`,
+    `${row.rowNumber},${csvCell(row.machineId)},${csvCell(row.errors.join("; "))}`,
   )].join("\n");
 }

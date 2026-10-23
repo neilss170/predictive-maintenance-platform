@@ -14,6 +14,8 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from predict import METADATA_PATH, MODEL_PATH, build_feature_row
@@ -37,6 +39,13 @@ app = FastAPI(
     ),
     version="2.0.0",
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(_request, exc: RequestValidationError) -> JSONResponse:
+    # Leave out the echoed input: NaN or Infinity in it would make the error itself unserialisable.
+    errors = [{key: value for key, value in error.items() if key not in ("input", "ctx")} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 
 @lru_cache
@@ -68,14 +77,15 @@ def rul_model():
 
 
 class MachineReading(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # Upper bounds are generous physical caps; they stop overflow in derived features.
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
     type: Literal["L", "M", "H"]
-    air_temperature: float = Field(gt=0, description="Kelvin")
-    process_temperature: float = Field(gt=0, description="Kelvin")
-    rotational_speed: float = Field(ge=0, description="rpm")
-    torque: float = Field(ge=0, description="Nm")
-    tool_wear: float = Field(ge=0, description="minutes")
+    air_temperature: float = Field(gt=0, le=2000, description="Kelvin")
+    process_temperature: float = Field(gt=0, le=2000, description="Kelvin")
+    rotational_speed: float = Field(ge=0, le=100_000, description="rpm")
+    torque: float = Field(ge=0, le=10_000, description="Nm")
+    tool_wear: float = Field(ge=0, le=100_000, description="minutes")
 
 
 class FailureRisk(BaseModel):
@@ -91,7 +101,7 @@ class FailureBatch(BaseModel):
 class EngineCycle(BaseModel):
     """One cycle of sensor history. Extra sensors (the flat FD001 channels) are ignored."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", allow_inf_nan=False)
 
     cycle: int = Field(ge=1)
     sensor_2: float

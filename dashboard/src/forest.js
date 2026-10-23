@@ -191,15 +191,16 @@ export function thresholdCrossings(inputs, model, threshold, { gridPoints = 120 
     }
     if (best === null) continue;
     // Refine between the current value and the coarse hit.
-    let near = current;
+    let near = Math.min(Math.max(current, field.min), field.max); // typed values can sit outside the range
     let far = best;
     for (let step = 0; step < 18; step += 1) {
       const mid = (near + far) / 2;
       if (crosses({ ...inputs, [field.name]: mid })) far = mid;
       else near = mid;
     }
-    let to = roundToStep(far, field);
-    if (!crosses({ ...inputs, [field.name]: to })) to = roundToStep(far + Math.sign(far - current) * field.step, field);
+    const clamp = (value) => Math.min(Math.max(value, field.min), field.max);
+    let to = clamp(roundToStep(far, field));
+    if (!crosses({ ...inputs, [field.name]: to })) to = clamp(roundToStep(far + Math.sign(far - current) * field.step, field));
     if (to === current || !crosses({ ...inputs, [field.name]: to })) continue;
     const probability = calculateResult({ ...inputs, [field.name]: to }, model, threshold).probability;
     moves.push({ ...field, from: current, to, probability, share: Math.abs(to - current) / span });
