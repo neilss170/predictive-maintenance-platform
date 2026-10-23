@@ -1,76 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { CostPolicy } from "./CostPolicy.jsx";
 import { EngineRul } from "./EngineRul.jsx";
+import { RuleCheck, WhatIf, WhyScore } from "./Explain.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
+import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
+import { InfoTip } from "./InfoTip.jsx";
 import { policyForRatio, riskLevel } from "./risk.js";
 
-const DEFAULT_INPUTS = {
-  type: "L",
-  airTemperature: 298.1,
-  processTemperature: 308.6,
-  rotationalSpeed: 1551,
-  torque: 42.8,
-  toolWear: 0,
-};
+const DEFAULT_INPUTS = SCENARIOS[0].inputs;
 
-const STRESS_INPUTS = {
-  type: "L",
-  airTemperature: 300.7,
-  processTemperature: 310.5,
-  rotationalSpeed: 1370,
-  torque: 65,
-  toolWear: 220,
-};
-
-const FIELDS = [
-  { name: "airTemperature", label: "Air temperature", unit: "K", min: 290, max: 310, step: 0.1 },
-  { name: "processTemperature", label: "Process temperature", unit: "K", min: 300, max: 320, step: 0.1 },
-  { name: "rotationalSpeed", label: "Rotational speed", unit: "rpm", min: 1000, max: 3000, step: 1 },
-  { name: "torque", label: "Torque", unit: "Nm", min: 0, max: 80, step: 0.1 },
-  { name: "toolWear", label: "Tool wear", unit: "min", min: 0, max: 260, step: 1 },
-];
-
-function transformInputs(inputs, model) {
-  const temperatureDifference = Number(inputs.processTemperature) - Number(inputs.airTemperature);
-  const mechanicalPower = (2 * Math.PI * Number(inputs.rotationalSpeed) * Number(inputs.torque)) / 60;
-  const rawNumeric = [
-    Number(inputs.airTemperature),
-    Number(inputs.processTemperature),
-    Number(inputs.rotationalSpeed),
-    Number(inputs.torque),
-    Number(inputs.toolWear),
-    temperatureDifference,
-    mechanicalPower,
-    Number(inputs.torque) * Number(inputs.toolWear),
-  ];
-  const standardized = rawNumeric.map(
-    (value, index) => Math.fround((value - model.means[index]) / model.scales[index]),
-  );
-  const encodedType = model.typeCategories.map((category) => (category === inputs.type ? 1 : 0));
-  return { vector: [...standardized, ...encodedType], temperatureDifference, mechanicalPower };
-}
-
-function scoreForest(vector, model) {
-  let probability = 0;
-  for (const tree of model.trees) {
-    let node = 0;
-    while (tree.l[node] !== -1) {
-      node = vector[tree.f[node]] <= tree.t[node] ? tree.l[node] : tree.r[node];
-    }
-    probability += tree.p[node];
-  }
-  return probability / model.trees.length;
-}
-
-function calculateResult(inputs, model, threshold) {
-  if (!inputs || !model) return null;
-  const transformed = transformInputs(inputs, model);
-  const probability = scoreForest(transformed.vector, model);
-  return { ...transformed, probability, flagged: probability >= threshold };
-}
-
-function Metric({ label, value }) {
-  return <div className="metric"><span>{label}</span><strong>{value}</strong></div>;
+function Metric({ label, value, term }) {
+  return <div className="metric"><span>{label}{term && <InfoTip term={term} label={`What is ${label}?`} />}</span><strong>{value}</strong></div>;
 }
 
 function downloadHistory(history) {
@@ -93,7 +33,6 @@ export function App() {
   const [model, setModel] = useState(null);
   const [modelError, setModelError] = useState("");
   const [inputs, setInputs] = useState(DEFAULT_INPUTS);
-  const [scoredInputs, setScoredInputs] = useState(DEFAULT_INPUTS);
   const [baseline, setBaseline] = useState(null);
   const [history, setHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem("pm-history")) || []; } catch { return []; }
@@ -128,7 +67,14 @@ export function App() {
   const threshold = model
     ? policy.mode === "cost" && costCurve ? policyForRatio(costCurve, policy.ratio).threshold : model.decisionThreshold
     : 0;
+  // Scoring follows the inputs live; the deferred copy keeps sliders smooth
+  // while the explanation and what-if search catch up.
+  const scoredInputs = useDeferredValue(inputs);
   const result = useMemo(() => calculateResult(scoredInputs, model, threshold), [scoredInputs, model, threshold]);
+  const explanation = useMemo(() => (model ? explainInputs(scoredInputs, model) : null), [scoredInputs, model]);
+  const crossings = useMemo(() => (model ? thresholdCrossings(scoredInputs, model, threshold) : null), [scoredInputs, model, threshold]);
+  const rules = useMemo(() => ruleStatus(scoredInputs), [scoredInputs]);
+  const activeScenario = SCENARIOS.find((scenario) => JSON.stringify(scenario.inputs) === JSON.stringify(inputs));
   const baselineResult = useMemo(() => calculateResult(baseline, model, threshold), [baseline, model, threshold]);
 
   function updateField(name, value) {
@@ -151,11 +97,9 @@ export function App() {
   const thresholdPercent = threshold * 100;
   const currentRisk = result && model ? riskLevel(result.probability, threshold) : null;
   const comparison = baselineResult && result ? (result.probability - baselineResult.probability) * 100 : null;
-  const hasPendingChanges = JSON.stringify(inputs) !== JSON.stringify(scoredInputs);
 
   function openFleetMachine(machineInputs) {
     setInputs(machineInputs);
-    setScoredInputs(machineInputs);
     setView("single");
     globalThis.scrollTo?.({ top: 0, behavior: "smooth" });
   }
@@ -183,9 +127,9 @@ export function App() {
             <p className="hero-copy">Two leakage-safe models in one console. A failure-risk classifier scores machine operating readings, and a remaining-useful-life model forecasts how many cycles a turbofan engine has left. Each was evaluated once on data it never saw.</p>
           </div>
           <div className="hero-metrics" aria-label="Model benchmark metrics">
-            <Metric label="Failure PR-AUC" value="0.957" />
-            <Metric label="RUL test RMSE" value="12.9 cycles" />
-            <Metric label="30-cycle alarm recall" value="92%" />
+            <Metric label="Failure PR-AUC" value="0.957" term="prAuc" />
+            <Metric label="RUL test RMSE" value="12.9 cycles" term="rmse" />
+            <Metric label="30-cycle alarm recall" value="92%" term="alarmRecall" />
           </div>
         </section>
 
@@ -219,7 +163,7 @@ export function App() {
             {!history.length ? <p className="empty-copy">Save a risk assessment to build a local comparison history.</p> : (
               <div className="history-list">
                 {history.map((item) => (
-                  <button className="history-row" type="button" key={item.id} onClick={() => { setInputs(item.inputs); setScoredInputs(item.inputs); }}>
+                  <button className="history-row" type="button" key={item.id} onClick={() => setInputs(item.inputs)}>
                     <span><strong>{item.inputs.type}-type machine</strong><small>{new Date(item.timestamp).toLocaleString()}</small></span>
                     <span><strong>{(item.probability * 100).toFixed(1)}%</strong><small>{item.flagged ? "Review" : "Monitor"}</small></span>
                   </button>
@@ -233,7 +177,20 @@ export function App() {
           <form className="input-panel" onSubmit={(event) => event.preventDefault()}>
             <div className="panel-heading">
               <div><p className="eyebrow">Current observation</p><h2>Operating inputs</h2></div>
-              <button className="text-button" type="button" onClick={() => { setInputs(DEFAULT_INPUTS); setScoredInputs(DEFAULT_INPUTS); }}>Reset</button>
+              <button className="text-button" type="button" onClick={() => setInputs(DEFAULT_INPUTS)}>Reset</button>
+            </div>
+
+            <div className="scenario-picker" data-tour="scenarios">
+              <span>Try a scenario</span>
+              <div role="group" aria-label="Example scenarios">
+                {SCENARIOS.map((scenario) => (
+                  <button key={scenario.key} type="button" title={scenario.note}
+                    className={activeScenario?.key === scenario.key ? "active" : ""} onClick={() => setInputs(scenario.inputs)}>
+                    {scenario.label}
+                  </button>
+                ))}
+              </div>
+              <small>{activeScenario ? activeScenario.note : "Custom readings. Move any slider and the score updates instantly."}</small>
             </div>
 
             <fieldset className="type-selector">
@@ -261,16 +218,13 @@ export function App() {
             </div>
 
             <div className="button-row">
-              <button className="secondary-button" type="button" onClick={() => setInputs(STRESS_INPUTS)}>Load stress example</button>
-              <button className="secondary-button" type="button" onClick={() => setBaseline({ ...scoredInputs })}>Pin current result</button>
+              <button className="secondary-button" type="button" onClick={() => setBaseline({ ...inputs })}>Pin to compare</button>
+              <button className="secondary-button" type="button" disabled={!result} onClick={saveAssessment}>Save assessment</button>
             </div>
-            <button className="primary-button" type="button" disabled={!model} onClick={() => setScoredInputs({ ...inputs })}>
-              {hasPendingChanges ? "Calculate updated risk" : "Risk score is up to date"}
-            </button>
-            <p className="scoring-note">Inputs can be adjusted freely. The model runs only when you calculate, preventing repeated heavy scoring during slider movement.</p>
+            <p className="scoring-note">The 500-tree model scores in your browser as you move the sliders. Pin a result, change readings, and compare.</p>
           </form>
 
-          <aside className={`result-panel ${result?.flagged ? "flagged" : ""}`}>
+          <aside className={`result-panel ${result?.flagged ? "flagged" : ""}`} data-tour="result">
             {modelError ? (
               <div className="error-state"><p className="eyebrow">Model unavailable</p><h2>Risk score could not be loaded.</h2><p>{modelError}</p></div>
             ) : !result ? (
@@ -281,29 +235,26 @@ export function App() {
                   <div><p className="eyebrow">Model result</p><h2>{result.flagged ? "Maintenance review recommended" : "Below review threshold"}</h2></div>
                   <span className={`status-pill ${currentRisk.className}`}>{currentRisk.label}</span>
                 </div>
-                <div className="score"><strong>{probabilityPercent.toFixed(1)}%</strong><span>estimated failure probability</span></div>
+                <div className="score"><strong>{probabilityPercent.toFixed(1)}%</strong><span>estimated failure probability <InfoTip term="probability" /></span></div>
                 <div className="gauge" aria-label="Failure probability">
                   <div className="gauge-fill" style={{ width: `${Math.max(probabilityPercent, 1)}%` }} />
                   <span className="threshold-marker" style={{ left: `${thresholdPercent}%` }} title={`Decision threshold ${thresholdPercent.toFixed(1)}%`} />
                 </div>
-                <div className="gauge-labels"><span>0%</span><span>Review threshold {thresholdPercent.toFixed(1)}%</span><span>100%</span></div>
+                <div className="gauge-labels"><span>0%</span><span>Review threshold {thresholdPercent.toFixed(1)}% <InfoTip term="threshold" /></span><span>100%</span></div>
 
                 {comparison !== null && (
                   <div className="comparison-card">
                     <div><span>Compared with pinned scenario</span><strong className={comparison <= 0 ? "improved" : "worsened"}>{comparison > 0 ? "+" : ""}{comparison.toFixed(1)} pts</strong></div>
-                    <button type="button" onClick={() => { setInputs(baseline); setScoredInputs(baseline); setBaseline(null); }}>Restore pinned</button>
+                    <button type="button" onClick={() => { setInputs(baseline); setBaseline(null); }}>Restore pinned</button>
                   </div>
                 )}
 
-                <div className="derived-grid">
-                  <Metric label="Temperature delta" value={`${result.temperatureDifference.toFixed(1)} K`} />
-                  <Metric label="Mechanical power" value={`${Math.round(result.mechanicalPower).toLocaleString()} W`} />
-                </div>
+                {explanation && <WhyScore explanation={explanation} probability={result.probability} />}
+                <WhatIf crossings={crossings} onTry={(move) => setInputs((current) => ({ ...current, [move.name]: move.to }))} />
 
                 <div className="action-card">
                   <strong>Suggested next step</strong>
                   <p>{result.flagged ? "Verify sensor readings, review recent maintenance records, and schedule an engineering inspection." : "Continue routine monitoring and reassess when operating conditions or tool wear change."}</p>
-                  <button className="save-button" type="button" onClick={saveAssessment}>Save assessment</button>
                 </div>
               </>
             )}
@@ -312,20 +263,15 @@ export function App() {
 
         <section className={`insight-grid ${view !== "single" ? "is-hidden" : ""}`}>
           <article className="insight-card">
-            <p className="eyebrow">Operating context</p><h2>Current signal profile</h2>
-            <div className="signal-list">
-              {FIELDS.map((field) => {
-                const position = ((inputs[field.name] - field.min) / (field.max - field.min)) * 100;
-                return <div className="signal-row" key={field.name}><span>{field.label}<strong>{inputs[field.name]} {field.unit}</strong></span><div><i style={{ width: `${Math.min(100, Math.max(0, position))}%` }} /></div></div>;
-              })}
-            </div>
-            <p className="card-note">Positions show the configured dashboard range, not causal feature importance.</p>
+            <p className="eyebrow">How machines fail here</p><h2>Failure rules check</h2>
+            <RuleCheck rules={rules} />
+            <p className="card-note">AI4I failures follow these documented rules. The model never sees them, yet learns them from the data. A further 0.1% of machines fail at random with no warning sign.</p>
           </article>
           <article className="insight-card">
             <p className="eyebrow">Decision checklist</p><h2>Human review remains in control</h2>
             <ul className="checklist">
               <li><span>1</span><div><strong>Confirm the observation</strong><p>Check units, sensor health, and whether readings represent the same operating moment.</p></div></li>
-              <li><span>2</span><div><strong>Compare operating scenarios</strong><p>Pin the current state, adjust controls, and inspect the model response.</p></div></li>
+              <li><span>2</span><div><strong>Read the reasons</strong><p>Check which readings drive the score and whether a small, safe change would clear it.</p></div></li>
               <li><span>3</span><div><strong>Record the decision</strong><p>Save or export the assessment before scheduling any maintenance action.</p></div></li>
             </ul>
           </article>
