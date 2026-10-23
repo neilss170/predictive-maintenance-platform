@@ -4,8 +4,21 @@
 export function riskLevel(probability, threshold) {
   if (probability < threshold * 0.5) return { label: "Low", className: "low" };
   if (probability < threshold) return { label: "Watch", className: "watch" };
-  if (probability < threshold + (1 - threshold) / 2) return { label: "High", className: "high" };
+  if (probability < criticalCut(threshold)) return { label: "High", className: "high" };
   return { label: "Critical", className: "critical" };
+}
+
+const criticalCut = (threshold) => threshold + (1 - threshold) / 2;
+const pct = (value) => `${(value * 100).toFixed(1)}%`;
+
+// What each band means at the active threshold, for the explanation tooltips.
+export function riskMeanings(threshold) {
+  return {
+    Low: `Below ${pct(threshold / 2)}, under half the review threshold. Routine monitoring.`,
+    Watch: `${pct(threshold / 2)}–${pct(threshold)}: below the review threshold but within reach. Recheck if readings drift.`,
+    High: `${pct(threshold)}–${pct(criticalCut(threshold))}: over the review threshold, so it is sent for review.`,
+    Critical: `${pct(criticalCut(threshold))} or more: the top half above the threshold. Review these first.`,
+  };
 }
 
 // The cost curve holds one row per integer cost ratio, each with the threshold

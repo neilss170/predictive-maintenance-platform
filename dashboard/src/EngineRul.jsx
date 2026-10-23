@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { InfoTip } from "./InfoTip.jsx";
-import { BAND_LABELS, bandClass, bandFor, bandPath, countBands, linePath, rulRange, summarizeEngines } from "./rulFleet.js";
+import { BAND_LABELS, bandClass, bandFor, bandMeaning, bandPath, countBands, linePath, rulRange, summarizeEngines } from "./rulFleet.js";
 
 const CHART = { width: 720, height: 300, left: 44, right: 16, top: 16, bottom: 34 };
 const SENSORS = [
@@ -150,7 +150,7 @@ export function EngineRul() {
               <p className="eyebrow">Engine {engine.unit}</p>
               <h3>Cycle {engine.cycles[cursor]} of {engine.cycles[lastIndex]} observed</h3>
             </div>
-            <span className={`table-risk ${bandClass(band)}`}>{BAND_LABELS[band]}</span>
+            <span className={`table-risk ${bandClass(band)}`}>{BAND_LABELS[band]} <InfoTip label={`What ${BAND_LABELS[band]} means`} text={bandMeaning(band, riskBands)} /></span>
           </div>
 
           <div className="rul-readout">

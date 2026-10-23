@@ -6,7 +6,7 @@ import { FleetAssessment } from "./FleetAssessment.jsx";
 import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
 import { InfoTip } from "./InfoTip.jsx";
 import { ModelPerformance } from "./ModelPerformance.jsx";
-import { riskLevel } from "./risk.js";
+import { riskLevel, riskMeanings } from "./risk.js";
 import { Tour } from "./Tour.jsx";
 
 const DEFAULT_INPUTS = SCENARIOS[0].inputs;
@@ -272,7 +272,9 @@ export function App() {
               <>
                 <div className="result-heading">
                   <div><p className="eyebrow">Model result</p><h2>{result.flagged ? "Maintenance review recommended" : "Below review threshold"}</h2></div>
-                  <span className={`status-pill ${currentRisk.className}`}>{currentRisk.label}</span>
+                  <span className={`status-pill ${currentRisk.className}`}>{currentRisk.label}
+                    <InfoTip label={`What ${currentRisk.label} means`} text={`${currentRisk.label}: ${riskMeanings(threshold)[currentRisk.label]} This machine scores ${probabilityPercent.toFixed(1)}%. Bands follow the review threshold, so they shift when you change costs.`} />
+                  </span>
                 </div>
                 <div className="score"><strong>{probabilityPercent.toFixed(1)}%</strong><span>estimated failure probability <InfoTip term="probability" /></span></div>
                 <div className="gauge" aria-label="Failure probability">
@@ -302,7 +304,7 @@ export function App() {
 
         <section className={`insight-grid ${view !== "single" ? "is-hidden" : ""}`}>
           <article className="insight-card">
-            <p className="eyebrow">How machines fail here</p><h2>Failure rules check</h2>
+            <p className="eyebrow">How machines fail here</p><h2>Failure rules check <InfoTip term="ruleStatus" /></h2>
             <RuleCheck rules={rules} />
             <p className="card-note">AI4I failures follow these documented rules. The model never sees them, yet learns them from the data. A further 0.1% of machines fail at random with no warning sign.</p>
           </article>

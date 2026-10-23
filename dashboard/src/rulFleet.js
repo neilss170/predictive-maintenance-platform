@@ -7,6 +7,13 @@ export function bandFor(predictedRul, riskBands) {
   return "healthy";
 }
 
+// What each band means for maintenance, at the exported cut-offs.
+export function bandMeaning(band, riskBands) {
+  if (band === "severe") return `Severe: ${riskBands.severe} or fewer cycles predicted. Plan maintenance now; this band is the 30-cycle failure alarm.`;
+  if (band === "warning") return `Warning: ${riskBands.severe + 1}–${riskBands.warning} cycles predicted. Schedule maintenance before it reaches Severe.`;
+  return `Healthy: more than ${riskBands.warning} cycles predicted. No action; forecasts above 125 read as "at least 125".`;
+}
+
 export function bandClass(band) {
   return BAND_CLASSES[band];
 }

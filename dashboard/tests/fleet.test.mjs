@@ -72,3 +72,9 @@ test("rupee costs map to a clamped cost ratio and a per-1,000 cost", async () =>
   const policy = { missed_failures: 4, false_alarms: 2 };
   assert.equal(costPer1000(policy, 50000, 2000, 1500), ((4 * 50000 + 2 * 2000) / 1500) * 1000);
 });
+
+test("band explanations cover exactly the bands riskLevel assigns", async () => {
+  const { riskLevel, riskMeanings } = await import("../src/risk.js");
+  const labels = [0, 0.3, 0.6, 0.99].map((p) => riskLevel(p, 0.483).label);
+  assert.deepEqual(Object.keys(riskMeanings(0.483)), labels);
+});

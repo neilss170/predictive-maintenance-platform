@@ -15,10 +15,11 @@ export const GLOSSARY = {
   rulRange: "80% range: on held-out training engines with a similar forecast, the true remaining life fell inside this range 8 times out of 10.",
   brier: "Brier score: the average squared gap between predicted probability and what happened. Lower is better; 0 is perfect.",
   cost: "Cost per 1,000 machines uses the 1,500 held-out test machines: missed failures × their cost plus false alarms × theirs, scaled to 1,000.",
+  ruleStatus: "Triggered: the reading breaks one of the dataset's documented failure rules. Close: within 10% of the limit. Clear: safely inside it.",
   rulCap: "Training targets are capped at 125 cycles, so a healthy engine reads \"125\", meaning at least 125.",
 };
 
-export function InfoTip({ term, label = "What does this mean?" }) {
+export function InfoTip({ term, text, label = "What does this mean?" }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   return (
@@ -28,7 +29,7 @@ export function InfoTip({ term, label = "What does this mean?" }) {
         aria-expanded={open} onClick={() => setOpen(true)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
         onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
       >i</button>
-      {open && <span role="tooltip" id={id} className="info-tip-bubble">{GLOSSARY[term]}</span>}
+      {open && <span role="tooltip" id={id} className="info-tip-bubble">{text ?? GLOSSARY[term]}</span>}
     </span>
   );
 }

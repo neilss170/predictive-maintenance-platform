@@ -1363,3 +1363,6 @@ footer p {
 .tour-actions > div { display: flex; gap: 8px; }
 .tour-actions .primary-button, .tour-actions .secondary-button { width: auto; margin: 0; padding: 9px 16px; }
 .welcome .primary-button, .tour-actions .primary-button, .tour-actions .secondary-button { min-height: 0; }
+.info-tip-bubble { white-space: pre-line; }
+.priority-table th .info-tip-bubble { top: calc(100% + 8px); bottom: auto; }
+.status-pill .info-tip-bubble, .rul-detail-head .info-tip-bubble { top: calc(100% + 8px); right: -8px; bottom: auto; left: auto; transform: none; }

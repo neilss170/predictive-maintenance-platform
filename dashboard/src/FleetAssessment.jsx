@@ -1,7 +1,8 @@
 import { Fragment, useMemo, useState } from "react";
 import { WhyScore } from "./Explain.jsx";
 import { invalidToCsv, resultsToCsv, validateFleetCsv } from "./fleet.js";
-import { riskLevel } from "./risk.js";
+import { InfoTip } from "./InfoTip.jsx";
+import { riskLevel, riskMeanings } from "./risk.js";
 
 const PAGE_SIZE = 25;
 
@@ -130,7 +131,7 @@ export function FleetAssessment({ threshold, scoreInputs, explain, onOpenMachine
 
           <div className="table-scroll">
             <table className="priority-table">
-              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level</th><th>Main driver</th><th>Decision</th><th /></tr></thead>
+              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level <InfoTip label="What the levels mean" text={Object.entries(riskMeanings(threshold)).map(([level, meaning]) => `${level}: ${meaning}`).join("\n")} /></th><th>Main driver</th><th>Decision</th><th /></tr></thead>
               <tbody>{visibleRows.map((row) => (
                 <Fragment key={row.machineId}>
                   <tr className={expanded === row.machineId ? "expanded" : ""}>
