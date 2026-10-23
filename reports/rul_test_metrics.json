@@ -34,7 +34,7 @@
     },
     "Random forest": {
       "rmse": 13.498053231665253,
-      "mae": 9.86966214849058,
+      "mae": 9.869662148490582,
       "nasa_score": 237.84457861074048
     },
     "Gradient boosting (shallow)": {

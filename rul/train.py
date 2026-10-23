@@ -199,7 +199,7 @@ def main() -> None:
         "frozen_before_test": True,
     }, indent=2), encoding="utf-8")
     METRICS_PATH.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-    export_web_fleet(model, test, features, {k: metrics[k] for k in ["model", "rmse", "mae", "nasa_score", "rmse_95ci"]})
+    export_web_fleet(model, test, features, {k: metrics[k] for k in ["model", "rmse", "mae", "nasa_score", "rmse_95ci", "alarm"]})
 
 
 if __name__ == "__main__":
