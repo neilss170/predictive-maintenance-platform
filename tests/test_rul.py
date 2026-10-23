@@ -69,10 +69,20 @@ class RulModelTests(unittest.TestCase):
         self.assertLess(np.sqrt(np.mean((np.clip(prediction, 0, RUL_CAP) - last["rul"]) ** 2)), 16)
 
     def test_reported_model_beats_baselines(self):
+        self.assertEqual(set(self.metrics["baselines"]), {"Mean baseline", "Ridge regression", "Random forest"})
         for name, baseline in self.metrics["baselines"].items():
-            if name.startswith("Gradient"):
-                continue
             self.assertLess(self.metrics["rmse"], baseline["rmse"], name)
+
+    def test_intervals_bracket_point_estimates(self):
+        for key in ["rmse", "mae", "nasa_score"]:
+            low, high = self.metrics[f"{key}_95ci"]
+            self.assertLessEqual(low, self.metrics[key])
+            self.assertGreaterEqual(high, self.metrics[key])
+        alarm = self.metrics["alarm"]
+        for key in ["precision", "recall"]:
+            low, high = alarm[f"{key}_95ci"]
+            self.assertLessEqual(low, alarm[key])
+            self.assertGreaterEqual(high, alarm[key])
 
     def test_nasa_score_penalises_late_predictions(self):
         self.assertGreater(nasa_score([50], [60]), nasa_score([50], [40]))
