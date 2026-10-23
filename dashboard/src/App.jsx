@@ -308,7 +308,7 @@ export function App() {
                 )}
 
                 {explanation && <WhyScore explanation={explanation} probability={result.probability} />}
-                <WhatIf crossings={crossings} onTry={(move) => setInputs((current) => ({ ...current, [move.name]: move.to }))} />
+                <WhatIf crossings={crossings} stale={settledInputs !== inputs} onTry={(move) => setInputs((current) => ({ ...current, [move.name]: move.to }))} />
 
                 <div className="action-card">
                   <strong>Suggested next step</strong>

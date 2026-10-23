@@ -48,11 +48,11 @@ function formatValue(value, field) {
   return Number(value).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-export function WhatIf({ crossings, onTry, limit = 3 }) {
+export function WhatIf({ crossings, stale = false, onTry, limit = 3 }) {
   if (!crossings) return null;
   const { flagged, moves } = crossings;
   return (
-    <div className="what-if">
+    <div className={`what-if ${stale ? "stale" : ""}`} aria-busy={stale}>
       <strong>{flagged ? "What would clear it" : "How close it is to review"}</strong>
       <p>{flagged
         ? "The smallest single change to each reading that brings this machine below the review threshold."
@@ -70,7 +70,7 @@ export function WhatIf({ crossings, onTry, limit = 3 }) {
                 <b>{formatValue(move.from, move)} → {formatValue(move.to, move)} {move.unit}</b>
               </span>
               <small>{(move.probability * 100).toFixed(1)}%{!move.actionable && " · environment"}</small>
-              {onTry && <button type="button" onClick={() => onTry(move)}>Try it</button>}
+              {onTry && <button type="button" disabled={stale} onClick={() => onTry(move)}>Try it</button>}
             </li>
           ))}
         </ul>

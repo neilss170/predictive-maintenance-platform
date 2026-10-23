@@ -1374,3 +1374,5 @@ footer p {
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rul-list .priority-table tbody tr:focus-visible td { background: #e8f2ed; outline: none; }
 .rul-list .priority-table tbody tr:focus-visible { outline: 3px solid rgba(57, 120, 101, 0.4); outline-offset: -3px; }
+.table-scroll { position: relative; } /* keeps .sr-only header text inside the scroll box */
+.what-if.stale { opacity: 0.55; transition: opacity 120ms; }
