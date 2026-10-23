@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EngineRul } from "./EngineRul.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
 
 const DEFAULT_INPUTS = {
@@ -166,27 +167,28 @@ export function App() {
           <button className="history-button" type="button" onClick={() => setShowHistory((value) => !value)}>
             History <span>{history.length}</span>
           </button>
-          <span className="benchmark-badge">AI4I benchmark</span>
+          <span className="benchmark-badge">AI4I + NASA C-MAPSS</span>
         </div>
       </header>
 
       <main>
         <section className="hero">
           <div>
-            <p className="eyebrow">Machine failure classification</p>
-            <h1>Turn operating signals into an actionable risk check.</h1>
-            <p className="hero-copy">Explore the validated random-forest benchmark using only pre-outcome measurements. Compare scenarios, save assessments, and turn each score into a review workflow.</p>
+            <p className="eyebrow">Failure risk + remaining useful life</p>
+            <h1>Know which machines are at risk, and how long they have left.</h1>
+            <p className="hero-copy">Two leakage-safe models in one console. A failure-risk classifier scores machine operating readings, and a remaining-useful-life model forecasts how many cycles a turbofan engine has left. Each was evaluated once on data it never saw.</p>
           </div>
           <div className="hero-metrics" aria-label="Model benchmark metrics">
-            <Metric label="Test PR-AUC" value="0.957" />
-            <Metric label="Test recall" value="88.2%" />
-            <Metric label="Test precision" value="95.7%" />
+            <Metric label="Failure PR-AUC" value="0.957" />
+            <Metric label="RUL test RMSE" value="12.9 cycles" />
+            <Metric label="30-cycle alarm recall" value="92%" />
           </div>
         </section>
 
         <nav className="view-tabs" aria-label="Dashboard views">
           <button className={view === "single" ? "active" : ""} type="button" onClick={() => setView("single")}>Single machine</button>
           <button className={view === "fleet" ? "active" : ""} type="button" onClick={() => setView("fleet")}>Fleet assessment</button>
+          <button className={view === "rul" ? "active" : ""} type="button" onClick={() => setView("rul")}>Engine RUL</button>
         </nav>
 
         {view === "fleet" && (model ? (
@@ -199,6 +201,8 @@ export function App() {
             onOpenMachine={openFleetMachine}
           />
         ) : <div className="fleet-loading">Loading fleet scoring model...</div>)}
+
+        {view === "rul" && <EngineRul />}
 
         {showHistory && view === "single" && (
           <section className="history-panel" aria-label="Assessment history">
@@ -324,6 +328,16 @@ export function App() {
           </article>
         </section>
 
+        {view === "rul" ? (
+          <section className="method-strip">
+            <div><p className="eyebrow">Engine-grouped by design</p><h2>Every engine is either training data or test data, never both.</h2></div>
+            <div className="method-columns">
+              <div><strong>Causal features</strong><p>14 informative sensors with rolling mean, rolling spread, 20-cycle trend, and drift from each engine's own early-life level. Each value uses only cycles already observed.</p></div>
+              <div><strong>Honest selection</strong><p>Five models compared with 5-fold GroupKFold over training engines. The official test set was scored once, after selection.</p></div>
+              <div><strong>Validation boundary</strong><p>Single operating condition and fault mode (FD001). Simulated engines, so real fleets need re-validation.</p></div>
+            </div>
+          </section>
+        ) : (
         <section className="method-strip">
           <div><p className="eyebrow">Leakage-safe by design</p><h2>What the model sees—and what it never sees.</h2></div>
           <div className="method-columns">
@@ -332,8 +346,9 @@ export function App() {
             <div><strong>Validation boundary</strong><p>Synthetic UCI data with a stratified benchmark split—not time-aware production validation.</p></div>
           </div>
         </section>
+        )}
       </main>
-      <footer><p>Predictive Maintenance Risk Console</p><p>Synthetic demonstration • Model decisions require human review</p></footer>
+      <footer><p>Predictive Maintenance Risk Console</p><p>Benchmark demonstration • Model decisions require human review</p></footer>
     </div>
   );
 }
