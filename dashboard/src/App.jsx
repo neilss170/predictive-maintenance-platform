@@ -86,7 +86,13 @@ export function App() {
   const scoredInputs = useDeferredValue(inputs);
   const result = useMemo(() => calculateResult(scoredInputs, model, threshold), [scoredInputs, model, threshold]);
   const explanation = useMemo(() => (model ? explainInputs(scoredInputs, model) : null), [scoredInputs, model]);
-  const crossings = useMemo(() => (model ? thresholdCrossings(scoredInputs, model, threshold) : null), [scoredInputs, model, threshold]);
+  // The what-if search costs ~700 forest passes, so it waits until the sliders pause.
+  const [settledInputs, setSettledInputs] = useState(inputs);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledInputs(inputs), 150);
+    return () => clearTimeout(timer);
+  }, [inputs]);
+  const crossings = useMemo(() => (model ? thresholdCrossings(settledInputs, model, threshold) : null), [settledInputs, model, threshold]);
   const rules = useMemo(() => ruleStatus(scoredInputs), [scoredInputs]);
   const ideals = idealRanges(inputs);
   const activeScenario = SCENARIOS.find((scenario) => JSON.stringify(scenario.inputs) === JSON.stringify(inputs));
