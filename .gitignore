@@ -2,17 +2,14 @@
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
-.openai/
+.pytest_cache/
 
 archive/
 data/raw/ai4i_2020.zip
 
 dashboard/.git/
-.sites-dashboard-git/
 dashboard/node_modules/
 dashboard/dist/
-dashboard/.openai/
-dashboard/AGENTS.md
 dashboard/*.tgz
 
 .env
