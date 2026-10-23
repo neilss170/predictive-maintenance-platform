@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { riskLevel as sharedRiskLevel } from "../src/risk.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const model = JSON.parse(readFileSync(path.join(root, "public", "model.json"), "utf8"));
@@ -52,11 +53,7 @@ function score(row) {
 }
 
 function riskLevel(probability) {
-  const threshold = model.decisionThreshold;
-  if (probability < threshold * 0.5) return "Low";
-  if (probability < threshold) return "Watch";
-  if (probability < Math.max(threshold * 2.5, 0.5)) return "High";
-  return "Critical";
+  return sharedRiskLevel(probability, model.decisionThreshold).label;
 }
 
 const random = mulberry32(20260728);
