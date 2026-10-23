@@ -271,3 +271,37 @@ export const SCENARIOS = [
     inputs: { type: "M", airTemperature: 299.0, processTemperature: 309.5, rotationalSpeed: 1500, torque: 35, toolWear: 220 },
   },
 ];
+
+// For each reading, the range that keeps every documented failure rule clear
+// while the other readings stay as they are. Missing bound = open-ended,
+// null = any value is fine, { none: true } = no value can clear the rules.
+export function idealRanges(inputs) {
+  const speed = Number(inputs.rotationalSpeed);
+  const torque = Number(inputs.torque);
+  const wear = Number(inputs.toolWear);
+  const gap = Number(inputs.processTemperature) - Number(inputs.airTemperature);
+  const k = 60 / (2 * Math.PI); // power (W) = speed (rpm) * torque (Nm) / k
+  const [low, high] = RULES.powerBandW;
+  const limit = RULES.strainLimit[inputs.type];
+  const raw = {
+    airTemperature: speed >= RULES.heatSpeedRpm ? null : { max: Number(inputs.processTemperature) - RULES.heatDiffK },
+    processTemperature: speed >= RULES.heatSpeedRpm ? null : { min: Number(inputs.airTemperature) + RULES.heatDiffK },
+    rotationalSpeed: { min: Math.max((low * k) / torque, gap < RULES.heatDiffK ? RULES.heatSpeedRpm : 0), max: (high * k) / torque },
+    torque: { min: (low * k) / speed, max: Math.min((high * k) / speed, wear ? limit / wear : Infinity) },
+    toolWear: { max: Math.min(RULES.toolWearWindow[0] - 1, torque ? limit / torque : Infinity) },
+  };
+  return Object.fromEntries(FIELDS.map((field) => {
+    const range = raw[field.name];
+    if (!range) return [field.name, null];
+    const min = range.min > field.min ? range.min : undefined;
+    const max = range.max < field.max ? range.max : undefined;
+    if ((min ?? field.min) > (max ?? field.max)) return [field.name, { none: true }];
+    return [field.name, { min, max }];
+  }));
+}
+
+export function isIdeal(value, range) {
+  if (!range) return true;
+  if (range.none) return false;
+  return (range.min === undefined || value >= range.min) && (range.max === undefined || value <= range.max);
+}

@@ -16,6 +16,7 @@ export const GLOSSARY = {
   brier: "Brier score: the average squared gap between predicted probability and what happened. Lower is better; 0 is perfect.",
   cost: "Cost per 1,000 machines uses the 1,500 held-out test machines: missed failures × their cost plus false alarms × theirs, scaled to 1,000.",
   ruleStatus: "Triggered: the reading breaks one of the dataset's documented failure rules. Close: within 10% of the limit. Clear: safely inside it.",
+  ideal: "Ideal ranges keep every documented failure rule clear while the other readings stay where they are, so they move as you change those readings. About 0.1% of machines still fail at random.",
   rulCap: "Training targets are capped at 125 cycles, so a healthy engine reads \"125\", meaning at least 125.",
 };
 

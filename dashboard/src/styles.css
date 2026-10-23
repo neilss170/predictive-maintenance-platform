@@ -1366,3 +1366,8 @@ footer p {
 .info-tip-bubble { white-space: pre-line; }
 .priority-table th .info-tip-bubble { top: calc(100% + 8px); bottom: auto; }
 .status-pill .info-tip-bubble, .rul-detail-head .info-tip-bubble { top: calc(100% + 8px); right: -8px; bottom: auto; left: auto; transform: none; }
+.field .field-label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; }
+.ideal-tag { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ideal-tag.in { color: #2f7458; }
+.ideal-tag.out { color: #a2452a; }
+.ideal-tag.out::before { content: "● "; }

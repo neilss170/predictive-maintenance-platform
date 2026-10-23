@@ -65,3 +65,14 @@ test("browser decisions on the test set match the Python evaluation report", asy
   const machines = machinesFrom(data).map((machine) => ({ ...machine, probability: calculateResult(machine.inputs, model, 0).probability }));
   assert.deepEqual(confusion(machines, threshold), { tp: 45, fn: 6, fp: 2, tn: 1447 });
 });
+
+test("ideal ranges flag the readings that break a rule, and fixing one clears it", async () => {
+  const { idealRanges, isIdeal } = await import("../src/forest.js");
+  const outside = (inputs) => Object.entries(idealRanges(inputs)).filter(([name, range]) => !isIdeal(inputs[name], range)).map(([name]) => name);
+  assert.deepEqual(outside(byKey.healthy), []);
+  assert.ok(outside(byKey.power).includes("torque"));
+  assert.ok(outside(byKey.strain).includes("toolWear"));
+  const { torque } = idealRanges(byKey.power);
+  const fixed = { ...byKey.power, torque: (torque.min + torque.max) / 2 };
+  assert.equal(ruleStatus(fixed).find((rule) => rule.key === "power").status !== "triggered", true);
+});

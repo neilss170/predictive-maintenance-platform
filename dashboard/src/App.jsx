@@ -3,7 +3,7 @@ import { activeThreshold, CostPolicy, DEFAULT_POLICY } from "./CostPolicy.jsx";
 import { EngineRul } from "./EngineRul.jsx";
 import { RuleCheck, WhatIf, WhyScore } from "./Explain.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
-import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
+import { calculateResult, explainInputs, FIELDS, idealRanges, isIdeal, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
 import { InfoTip } from "./InfoTip.jsx";
 import { ModelPerformance } from "./ModelPerformance.jsx";
 import { riskLevel, riskMeanings } from "./risk.js";
@@ -13,6 +13,16 @@ const DEFAULT_INPUTS = SCENARIOS[0].inputs;
 
 function Metric({ label, value, term }) {
   return <div className="metric"><span>{label}{term && <InfoTip term={term} label={`What is ${label}?`} />}</span><strong>{value}</strong></div>;
+}
+
+function IdealTag({ value, range, unit, step }) {
+  // Round inward so the shown bound itself is still safe.
+  const fmt = (v, round) => (round(v / step) * step).toLocaleString("en-US", { maximumFractionDigits: step < 1 ? 1 : 0 });
+  const text = !range ? "Any value is fine"
+    : range.none ? "No safe value: change another reading"
+      : range.min !== undefined && range.max !== undefined ? `Ideal ${fmt(range.min, Math.ceil)}–${fmt(range.max, Math.floor)} ${unit}`
+        : range.min !== undefined ? `Ideal ${fmt(range.min, Math.ceil)}+ ${unit}` : `Ideal up to ${fmt(range.max, Math.floor)} ${unit}`;
+  return <small className={`ideal-tag ${isIdeal(value, range) ? "in" : "out"}`}>{text}</small>;
 }
 
 function downloadHistory(history) {
@@ -78,6 +88,7 @@ export function App() {
   const explanation = useMemo(() => (model ? explainInputs(scoredInputs, model) : null), [scoredInputs, model]);
   const crossings = useMemo(() => (model ? thresholdCrossings(scoredInputs, model, threshold) : null), [scoredInputs, model, threshold]);
   const rules = useMemo(() => ruleStatus(scoredInputs), [scoredInputs]);
+  const ideals = idealRanges(inputs);
   const activeScenario = SCENARIOS.find((scenario) => JSON.stringify(scenario.inputs) === JSON.stringify(inputs));
   const explainMachine = useCallback((machineInputs) => explainInputs(machineInputs, model), [model]);
   const baselineResult = useMemo(() => calculateResult(baseline, model, threshold), [baseline, model, threshold]);
@@ -215,7 +226,7 @@ export function App() {
         <section className={`workspace ${view !== "single" ? "is-hidden" : ""}`}>
           <form className="input-panel" onSubmit={(event) => event.preventDefault()}>
             <div className="panel-heading">
-              <div><p className="eyebrow">Current observation</p><h2>Operating inputs</h2></div>
+              <div><p className="eyebrow">Current observation</p><h2>Operating inputs <InfoTip term="ideal" label="What the ideal ranges mean" /></h2></div>
               <button className="text-button" type="button" onClick={() => setInputs(DEFAULT_INPUTS)}>Reset</button>
             </div>
 
@@ -245,7 +256,7 @@ export function App() {
             <div className="field-grid">
               {FIELDS.map(({ name, label, unit, min, max, step }) => (
                 <label className="field" key={name}>
-                  <span>{label}</span>
+                  <span className="field-label">{label}<IdealTag value={inputs[name]} range={ideals[name]} unit={unit} step={step} /></span>
                   <div className="input-wrap">
                     <input aria-label={label} type="number" value={inputs[name]} min={min} max={max} step={step} onChange={(event) => updateField(name, event.target.value)} />
                     <small>{unit}</small>
