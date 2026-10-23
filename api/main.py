@@ -13,7 +13,7 @@ from typing import Literal
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from predict import METADATA_PATH, MODEL_PATH, build_feature_row
@@ -25,6 +25,7 @@ RUL_MODEL_PATH = PROJECT_ROOT / "models" / "rul_model.joblib"
 RUL_CONTRACT_PATH = PROJECT_ROOT / "models" / "rul_model_contract.json"
 RUL_METRICS_PATH = PROJECT_ROOT / "reports" / "rul_test_metrics.json"
 FAILURE_METRICS_PATH = PROJECT_ROOT / "reports" / "final_governed_test_metrics.json"
+COST_POLICY_PATH = PROJECT_ROOT / "models" / "ai4i_cost_policy.json"
 MAX_BATCH = 5000
 MAX_CYCLES = 1000
 
@@ -41,6 +42,24 @@ app = FastAPI(
 @lru_cache
 def failure_model():
     return joblib.load(MODEL_PATH), json.loads(METADATA_PATH.read_text("utf-8"))
+
+
+@lru_cache
+def cost_policy() -> dict:
+    return json.loads(COST_POLICY_PATH.read_text("utf-8"))
+
+
+def decision_threshold(cost_ratio: int | None) -> float:
+    """Frozen threshold by default; the cost-optimal one when a cost ratio is given."""
+    if cost_ratio is None:
+        return float(failure_model()[1]["threshold"])
+    return float(cost_policy()["thresholds"][str(cost_ratio)])
+
+
+CostRatio = Query(
+    default=None, ge=1, le=100,
+    description="Cost of a missed failure divided by the cost of a false alarm. Omit for the frozen threshold.",
+)
 
 
 @lru_cache
@@ -110,14 +129,14 @@ class RulPrediction(BaseModel):
     note: str | None = None
 
 
-def score_failures(readings: list[MachineReading]) -> list[FailureRisk]:
+def score_failures(readings: list[MachineReading], cost_ratio: int | None = None) -> list[FailureRisk]:
     model, metadata = failure_model()
     rows = pd.concat(
         [build_feature_row(SimpleNamespace(**reading.model_dump())) for reading in readings],
         ignore_index=True,
     )
     probabilities = model.predict_proba(rows[metadata["features"]])[:, 1]
-    threshold = float(metadata["threshold"])
+    threshold = decision_threshold(cost_ratio)
     return [
         FailureRisk(failure_probability=round(float(p), 6), decision_threshold=round(threshold, 6), flagged=bool(p >= threshold))
         for p in probabilities
@@ -128,6 +147,7 @@ def score_failures(readings: list[MachineReading]) -> list[FailureRisk]:
 def health() -> dict:
     failure_model()
     rul_model()
+    cost_policy()
     return {"status": "ok", "models": ["failure-risk", "rul"]}
 
 
@@ -150,13 +170,13 @@ def models() -> dict:
 
 
 @app.post("/v1/failure-risk", response_model=FailureRisk)
-def failure_risk(reading: MachineReading) -> FailureRisk:
-    return score_failures([reading])[0]
+def failure_risk(reading: MachineReading, cost_ratio: int | None = CostRatio) -> FailureRisk:
+    return score_failures([reading], cost_ratio)[0]
 
 
 @app.post("/v1/failure-risk/batch", response_model=list[FailureRisk])
-def failure_risk_batch(batch: FailureBatch) -> list[FailureRisk]:
-    return score_failures(batch.machines)
+def failure_risk_batch(batch: FailureBatch, cost_ratio: int | None = CostRatio) -> list[FailureRisk]:
+    return score_failures(batch.machines, cost_ratio)
 
 
 @app.post("/v1/rul", response_model=RulPrediction)

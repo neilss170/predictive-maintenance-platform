@@ -59,6 +59,17 @@ class ApiTests(unittest.TestCase):
         single = self.client.post("/v1/failure-risk", json=STRESSED).json()
         self.assertEqual(batch[1], single)
 
+    def test_cost_ratio_selects_policy_threshold(self):
+        frozen = self.client.post("/v1/failure-risk", json=HEALTHY).json()
+        costly_misses = self.client.post("/v1/failure-risk?cost_ratio=100", json=HEALTHY).json()
+        self.assertLess(costly_misses["decision_threshold"], frozen["decision_threshold"])
+        self.assertEqual(costly_misses["failure_probability"], frozen["failure_probability"])
+
+    def test_cost_ratio_out_of_range_rejected(self):
+        for ratio in [0, 101]:
+            response = self.client.post(f"/v1/failure-risk?cost_ratio={ratio}", json=HEALTHY)
+            self.assertEqual(response.status_code, 422)
+
     def test_rul_for_test_engine(self):
         # Engine 1 of the official test set has 31 cycles and a true RUL of 112.
         body = self.client.post("/v1/rul", json={"history": engine_history(1)}).json()

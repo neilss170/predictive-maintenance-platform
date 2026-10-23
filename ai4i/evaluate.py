@@ -49,6 +49,7 @@ DATA_DIR = PROJECT_ROOT / "data" / "governed"
 REPORT_PATH = PROJECT_ROOT / "reports" / "ai4i_evaluation.json"
 FIGURE_DIR = PROJECT_ROOT / "reports" / "figures"
 WEB_PATH = PROJECT_ROOT / "dashboard" / "public" / "cost-curve.json"
+POLICY_PATH = PROJECT_ROOT / "models" / "ai4i_cost_policy.json"
 
 TARGET = "Machine failure"
 MODES = ["TWF", "HDF", "PWF", "OSF", "RNF"]
@@ -304,6 +305,10 @@ def main() -> None:
     REPORT_PATH.write_text(json.dumps(report, indent=2), encoding="utf-8")
     calibration_figure(y_test, prob_test, y_dev, oof)
     cost_figure(table, threshold)
+    POLICY_PATH.write_text(json.dumps({
+        "selection": report["threshold_selection"],
+        "thresholds": {str(row["ratio"]): row["threshold"] for row in table},
+    }, indent=2), encoding="utf-8")
     WEB_PATH.write_text(json.dumps({
         "version": 1,
         "frozenThreshold": threshold,
