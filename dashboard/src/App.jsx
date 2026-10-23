@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { CostPolicy } from "./CostPolicy.jsx";
 import { EngineRul } from "./EngineRul.jsx";
 import { RuleCheck, WhatIf, WhyScore } from "./Explain.jsx";
@@ -75,6 +75,7 @@ export function App() {
   const crossings = useMemo(() => (model ? thresholdCrossings(scoredInputs, model, threshold) : null), [scoredInputs, model, threshold]);
   const rules = useMemo(() => ruleStatus(scoredInputs), [scoredInputs]);
   const activeScenario = SCENARIOS.find((scenario) => JSON.stringify(scenario.inputs) === JSON.stringify(inputs));
+  const explainMachine = useCallback((machineInputs) => explainInputs(machineInputs, model), [model]);
   const baselineResult = useMemo(() => calculateResult(baseline, model, threshold), [baseline, model, threshold]);
 
   function updateField(name, value) {
@@ -145,6 +146,7 @@ export function App() {
           <FleetAssessment
             threshold={threshold}
             scoreInputs={(machineInputs) => ({ probability: calculateResult(machineInputs, model, threshold).probability })}
+            explain={explainMachine}
             onOpenMachine={openFleetMachine}
           />
         ) : <div className="fleet-loading">Loading fleet scoring model...</div>)}

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { WhyScore } from "./Explain.jsx";
 import { invalidToCsv, resultsToCsv, validateFleetCsv } from "./fleet.js";
 import { riskLevel } from "./risk.js";
 
@@ -18,7 +19,7 @@ function Summary({ label, value, tone = "" }) {
   return <div className={`fleet-summary ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function FleetAssessment({ threshold, scoreInputs, onOpenMachine }) {
+export function FleetAssessment({ threshold, scoreInputs, explain, onOpenMachine }) {
   const [fleet, setFleet] = useState(null);
   const [error, setError] = useState("");
   const [filename, setFilename] = useState("");
@@ -27,6 +28,7 @@ export function FleetAssessment({ threshold, scoreInputs, onOpenMachine }) {
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [sortDirection, setSortDirection] = useState("desc");
+  const [expanded, setExpanded] = useState(null);
 
   async function handleFile(file) {
     setError("");
@@ -59,7 +61,12 @@ export function FleetAssessment({ threshold, scoreInputs, onOpenMachine }) {
   }, [fleet, rows, search, riskFilter, flaggedOnly, sortDirection]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const visibleRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Explanations only for the rows on screen: each costs about one forest pass.
+  const visibleRows = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((row) => {
+    const explanation = explain(row.inputs);
+    const driver = explanation.reasons.find((reason) => reason.points > 0);
+    return { ...row, explanation, driver };
+  }), [filtered, page, explain]);
   const counts = rows.reduce((summary, row) => {
     summary[row.risk.label] = (summary[row.risk.label] || 0) + 1;
     return summary;
@@ -123,14 +130,28 @@ export function FleetAssessment({ threshold, scoreInputs, onOpenMachine }) {
 
           <div className="table-scroll">
             <table className="priority-table">
-              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level</th><th>Torque</th><th>Tool wear</th><th>Decision</th><th /></tr></thead>
+              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level</th><th>Main driver</th><th>Decision</th><th /></tr></thead>
               <tbody>{visibleRows.map((row) => (
-                <tr key={row.machineId}>
-                  <td><strong>{row.machineId}</strong></td><td>{row.inputs.type}</td><td>{(row.probability * 100).toFixed(1)}%</td>
-                  <td><span className={`table-risk ${row.risk.className}`}>{row.risk.label}</span></td>
-                  <td>{row.inputs.torque} Nm</td><td>{row.inputs.toolWear} min</td><td>{row.flagged ? "Review" : "Monitor"}</td>
-                  <td><button type="button" onClick={() => onOpenMachine(row.inputs)}>Open</button></td>
-                </tr>
+                <Fragment key={row.machineId}>
+                  <tr className={expanded === row.machineId ? "expanded" : ""}>
+                    <td><strong>{row.machineId}</strong></td><td>{row.inputs.type}</td><td>{(row.probability * 100).toFixed(1)}%</td>
+                    <td><span className={`table-risk ${row.risk.className}`}>{row.risk.label}</span></td>
+                    <td className="driver-cell">{row.driver ? <>{row.driver.label} <small>{row.driver.value}</small></> : "—"}</td>
+                    <td>{row.flagged ? "Review" : "Monitor"}</td>
+                    <td className="row-actions">
+                      <button type="button" aria-expanded={expanded === row.machineId}
+                        onClick={() => setExpanded((current) => (current === row.machineId ? null : row.machineId))}>
+                        {expanded === row.machineId ? "Hide" : "Why?"}
+                      </button>
+                      <button type="button" onClick={() => onOpenMachine(row.inputs)}>Open</button>
+                    </td>
+                  </tr>
+                  {expanded === row.machineId && (
+                    <tr className="why-row"><td colSpan={7}>
+                      <WhyScore explanation={row.explanation} probability={row.probability} limit={3} />
+                    </td></tr>
+                  )}
+                </Fragment>
               ))}</tbody>
             </table>
           </div>

@@ -1254,3 +1254,17 @@ footer p {
   .reason-list li { grid-template-columns: minmax(0, 1fr) 62px; }
   .reason-bar { display: none; }
 }
+
+/* ---- Fleet explanations ---- */
+.driver-cell small { margin-left: 4px; color: #6b7a75; font-variant-numeric: tabular-nums; }
+.row-actions { white-space: nowrap; }
+.row-actions button + button { margin-left: 6px; }
+.priority-table tr.expanded td { background: #f3f7f5; }
+.why-row td { padding: 0 14px 14px; background: #f3f7f5; white-space: normal; }
+.why-row .explain { margin-top: 0; background: white; }
+.why-row .info-tip-button { width: 16px; height: 16px; padding: 0; border: 1px solid currentColor; border-radius: 50%; background: transparent; }
+.why-row .text-button { padding: 0; border: 0; background: transparent; }
+@media (max-width: 680px) {
+  .why-row td { padding: 0 0 12px; }
+  .why-row .explain { position: sticky; left: 0; width: calc(100vw - 84px); }
+}
