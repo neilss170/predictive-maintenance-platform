@@ -1,11 +1,11 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { CostPolicy } from "./CostPolicy.jsx";
+import { activeThreshold, CostPolicy, DEFAULT_POLICY } from "./CostPolicy.jsx";
 import { EngineRul } from "./EngineRul.jsx";
 import { RuleCheck, WhatIf, WhyScore } from "./Explain.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
 import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
 import { InfoTip } from "./InfoTip.jsx";
-import { policyForRatio, riskLevel } from "./risk.js";
+import { riskLevel } from "./risk.js";
 
 const DEFAULT_INPUTS = SCENARIOS[0].inputs;
 
@@ -40,7 +40,7 @@ export function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [view, setView] = useState("single");
   const [costCurve, setCostCurve] = useState(null);
-  const [policy, setPolicy] = useState({ mode: "frozen", ratio: 10 });
+  const [policy, setPolicy] = useState(DEFAULT_POLICY);
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}cost-curve.json`)
@@ -64,9 +64,7 @@ export function App() {
     }
   }, [history]);
 
-  const threshold = model
-    ? policy.mode === "cost" && costCurve ? policyForRatio(costCurve, policy.ratio).threshold : model.decisionThreshold
-    : 0;
+  const threshold = model ? activeThreshold(costCurve, policy, model.decisionThreshold) : 0;
   // Scoring follows the inputs live; the deferred copy keeps sliders smooth
   // while the explanation and what-if search catch up.
   const scoredInputs = useDeferredValue(inputs);

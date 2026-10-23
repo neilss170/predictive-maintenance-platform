@@ -62,3 +62,13 @@ test("cost policy picks the curve row for a ratio and clamps out-of-range ratios
   assert.equal(testCost(row, 20), row.test_cost);
   assert.ok(curve.frozen.missed_failures + curve.frozen.flagged > 0);
 });
+
+test("rupee costs map to a clamped cost ratio and a per-1,000 cost", async () => {
+  const { costPer1000, costRatio } = await import("../src/risk.js");
+  assert.equal(costRatio(50000, 2000), 25);
+  assert.equal(costRatio(1000, 2000), 1);
+  assert.equal(costRatio(5000000, 2000), 100);
+  assert.equal(costRatio(50000, 0), 100);
+  const policy = { missed_failures: 4, false_alarms: 2 };
+  assert.equal(costPer1000(policy, 50000, 2000, 1500), ((4 * 50000 + 2 * 2000) / 1500) * 1000);
+});

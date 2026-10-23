@@ -1268,3 +1268,25 @@ footer p {
   .why-row td { padding: 0 0 12px; }
   .why-row .explain { position: sticky; left: 0; width: calc(100vw - 84px); }
 }
+
+/* ---- Rupee cost inputs ---- */
+.cost-inputs { display: grid; grid-template-columns: 1fr 1fr 1.6fr; align-items: end; gap: 12px; margin-top: 16px; }
+.cost-inputs label > span { display: block; margin-bottom: 6px; color: #42534d; font-size: 13px; font-weight: 600; }
+.cost-inputs .input-wrap small { order: -1; margin-right: 4px; }
+.cost-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.cost-presets button { display: flex; flex-direction: column; align-items: flex-start; padding: 7px 11px; border: 1px solid #cdd8d2; border-radius: 10px; color: #2c3f39; background: white; font-size: 12px; font-weight: 700; text-align: left; }
+.cost-presets button small { color: #6b7a75; font-size: 10px; font-weight: 600; }
+.cost-presets button.active { border-color: #245c4c; background: #eaf3ef; }
+.cost-ratio { margin: 12px 0 0; color: #42534d; font-size: 13px; }
+.cost-outcomes .fleet-summary strong small { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
+.cost-outcomes .improved { color: #2f7458; }
+.cost-outcomes .worsened { color: #a2452a; }
+
+@media (max-width: 980px) {
+  .cost-inputs { grid-template-columns: 1fr 1fr; }
+  .cost-presets { grid-column: 1 / -1; }
+}
+.fleet-summary span.info-tip, .metric span.info-tip { display: inline-flex; margin-top: 0; }
+.fleet-summary .info-tip-bubble, .metric .info-tip-bubble { display: block; }
+.cost-inputs .input-wrap small { margin: 0 0 0 14px; }
+.cost-inputs .input-wrap input { padding-left: 6px; }

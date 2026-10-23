@@ -19,3 +19,17 @@ export function policyForRatio(curve, ratio) {
 export function testCost(policy, ratio) {
   return ratio * policy.missed_failures + policy.false_alarms;
 }
+
+// Rupee costs to the integer ratio the cost curve is indexed by (1-100).
+export function costRatio(missCost, alarmCost) {
+  const miss = Math.max(Number(missCost) || 0, 0);
+  const alarm = Math.max(Number(alarmCost) || 0, 0);
+  if (alarm === 0) return 100;
+  return Math.min(Math.max(Math.round(miss / alarm), 1), 100);
+}
+
+// Expected cost per 1,000 machines, from the held-out test outcome of a policy.
+export function costPer1000(policy, missCost, alarmCost, testRows) {
+  const total = policy.missed_failures * Number(missCost) + policy.false_alarms * Number(alarmCost);
+  return (total / testRows) * 1000;
+}
