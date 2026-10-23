@@ -5,6 +5,7 @@ import { RuleCheck, WhatIf, WhyScore } from "./Explain.jsx";
 import { FleetAssessment } from "./FleetAssessment.jsx";
 import { calculateResult, explainInputs, FIELDS, ruleStatus, SCENARIOS, thresholdCrossings } from "./forest.js";
 import { InfoTip } from "./InfoTip.jsx";
+import { ModelPerformance } from "./ModelPerformance.jsx";
 import { riskLevel } from "./risk.js";
 
 const DEFAULT_INPUTS = SCENARIOS[0].inputs;
@@ -132,9 +133,10 @@ export function App() {
           </div>
         </section>
 
-        <nav className="view-tabs" aria-label="Dashboard views">
+        <nav className="view-tabs" aria-label="Dashboard views" data-tour="tabs">
           <button className={view === "single" ? "active" : ""} type="button" onClick={() => setView("single")}>Single machine</button>
           <button className={view === "fleet" ? "active" : ""} type="button" onClick={() => setView("fleet")}>Fleet assessment</button>
+          <button className={view === "performance" ? "active" : ""} type="button" onClick={() => setView("performance")}>Model performance</button>
           <button className={view === "rul" ? "active" : ""} type="button" onClick={() => setView("rul")}>Engine RUL</button>
         </nav>
 
@@ -148,6 +150,10 @@ export function App() {
             onOpenMachine={openFleetMachine}
           />
         ) : <div className="fleet-loading">Loading fleet scoring model...</div>)}
+
+        {view === "performance" && (model
+          ? <ModelPerformance model={model} threshold={threshold} onOpenMachine={openFleetMachine} />
+          : <div className="fleet-loading">Loading the failure model...</div>)}
 
         {view === "rul" && <EngineRul />}
 

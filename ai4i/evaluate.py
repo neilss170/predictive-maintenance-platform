@@ -50,6 +50,7 @@ REPORT_PATH = PROJECT_ROOT / "reports" / "ai4i_evaluation.json"
 FIGURE_DIR = PROJECT_ROOT / "reports" / "figures"
 WEB_PATH = PROJECT_ROOT / "dashboard" / "public" / "cost-curve.json"
 POLICY_PATH = PROJECT_ROOT / "models" / "ai4i_cost_policy.json"
+WEB_TEST_PATH = PROJECT_ROOT / "dashboard" / "public" / "test-machines.json"
 
 TARGET = "Machine failure"
 MODES = ["TWF", "HDF", "PWF", "OSF", "RNF"]
@@ -245,6 +246,32 @@ def cost_figure(table: list[dict], frozen_threshold: float) -> None:
     plt.close(fig)
 
 
+def export_test_machines(raw_test: pd.DataFrame, report: dict) -> None:
+    """Held-out machines and outcomes for the dashboard's performance view.
+
+    The browser re-scores them with its own copy of the forest, so the view
+    follows whatever threshold the decision policy sets.
+    """
+    columns = ["Type", "Air temperature [K]", "Process temperature [K]", "Rotational speed [rpm]", "Torque [Nm]", "Tool wear [min]"]
+    rows = [
+        [r["Type"], *[float(r[c]) for c in columns[1:]], int(r[TARGET]), ",".join(m for m in MODES if r[m] == 1)]
+        for _, r in raw_test.iterrows()
+    ]
+    model, rules = report["model"], report["rule_baseline"]["deterministic_rules"]
+    WEB_TEST_PATH.write_text(json.dumps({
+        "version": 1,
+        "columns": ["type", "airTemperature", "processTemperature", "rotationalSpeed", "torque", "toolWear", "failed", "modes"],
+        "rows": rows,
+        "summary": {
+            "prAuc": model["pr_auc"], "prAuc95ci": report["model_95ci"]["pr_auc"],
+            "brier": model["brier"], "brierBaseRate": model["brier_base_rate"],
+            "ece": report["calibration"]["ece_test"],
+            "modelF1": model["f1"], "rulesF1": rules["f1"],
+            "rulesPrecision": rules["precision"], "rulesRecall": rules["recall"],
+        },
+    }, separators=(",", ":")), encoding="utf-8")
+
+
 def main() -> None:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     model = joblib.load(MODEL_PATH)
@@ -317,6 +344,8 @@ def main() -> None:
         "testFailures": int(y_test.sum()),
         "ratios": table,
     }, separators=(",", ":")), encoding="utf-8")
+
+    export_test_machines(raw_test, report)
 
     ci = report["model_95ci"]
     print(f"\nTest ({len(y_test)} machines, {int(y_test.sum())} failures), frozen threshold {threshold:.3f}:")

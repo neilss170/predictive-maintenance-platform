@@ -58,3 +58,10 @@ test("rule status flags the documented failure conditions", () => {
   assert.equal(status("wear").wear, "triggered");
   assert.ok(Object.values(status("healthy")).every((value) => value !== "triggered"));
 });
+
+test("browser decisions on the test set match the Python evaluation report", async () => {
+  const { confusion, machinesFrom } = await import("../src/performance.js");
+  const data = JSON.parse(readFileSync(new URL("../public/test-machines.json", import.meta.url), "utf-8"));
+  const machines = machinesFrom(data).map((machine) => ({ ...machine, probability: calculateResult(machine.inputs, model, 0).probability }));
+  assert.deepEqual(confusion(machines, threshold), { tp: 45, fn: 6, fp: 2, tn: 1447 });
+});

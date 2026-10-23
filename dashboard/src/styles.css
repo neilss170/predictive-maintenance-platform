@@ -1290,3 +1290,57 @@ footer p {
 .fleet-summary .info-tip-bubble, .metric .info-tip-bubble { display: block; }
 .cost-inputs .input-wrap small { margin: 0 0 0 14px; }
 .cost-inputs .input-wrap input { padding-left: 6px; }
+
+/* ---- Model performance ---- */
+.performance-panel h3 { margin: 4px 0 12px; font-size: 18px; }
+.perf-top { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; gap: 28px; margin-top: 22px; }
+.confusion { display: grid; gap: 8px; }
+.confusion > div { display: grid; grid-template-columns: 110px 1fr 1fr; align-items: stretch; gap: 8px; }
+.confusion-head span { color: #64736e; font-size: 11px; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+.confusion [role="rowheader"] { align-self: center; color: #42534d; font-size: 13px; font-weight: 700; }
+.confusion .cell { padding: 14px; border: 1px solid #dce4df; border-radius: 12px; background: white; text-align: center; }
+.confusion .cell strong { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+.confusion .cell small { color: #64736e; font-size: 12px; }
+.confusion .cell.good { background: #eef6f2; border-color: #cfe3d9; }
+.confusion .cell.bad { background: #fff1ed; border-color: #e5b9ab; }
+.confusion .cell.warn { background: #fff8ea; border-color: #ead7aa; }
+.perf-statements p { margin: 0 0 12px; font-size: 15px; line-height: 1.5; }
+.perf-statements strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.perf-statements .perf-note { color: #64736e; font-size: 13px; }
+.perf-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-top: 24px; }
+.tradeoff { margin: 0; }
+.tradeoff svg { display: block; width: 100%; height: auto; }
+.tradeoff text { fill: #64736e; font-size: 11px; }
+.tradeoff .grid { stroke: #e3e9e5; }
+.tradeoff path { fill: none; stroke-width: 2.2; }
+.tradeoff path.recall { stroke: #245c4c; }
+.tradeoff path.precision { stroke: #c8603f; }
+.tradeoff line.marker { stroke: #172326; stroke-dasharray: 4 3; }
+.tradeoff figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px; color: #42534d; font-size: 12px; }
+.tradeoff .key { display: inline-block; width: 14px; height: 3px; margin-right: 6px; border-radius: 2px; vertical-align: middle; }
+.tradeoff .key.recall { background: #245c4c; }
+.tradeoff .key.precision { background: #c8603f; }
+.tradeoff .key.marker { height: 0; border-top: 2px dashed #172326; }
+.mode-list { margin: 0; padding: 0; list-style: none; }
+.mode-list li { margin-bottom: 12px; }
+.mode-list span { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
+.mode-list strong { font-variant-numeric: tabular-nums; }
+.mode-list i { display: block; height: 8px; border-radius: 4px; background: #e6ece8; }
+.mode-list b { display: block; height: 100%; border-radius: 4px; background: #245c4c; }
+.mistakes { margin-top: 26px; }
+.mistakes .band-filter { margin: 0; }
+.evidence { margin-top: 26px; padding-top: 22px; border-top: 1px solid #e3e9e5; }
+.evidence p { font-size: 13px; line-height: 1.6; }
+
+@media (max-width: 980px) {
+  .perf-top, .perf-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .confusion > div { grid-template-columns: 78px 1fr 1fr; gap: 6px; }
+  .confusion .cell { padding: 10px 6px; }
+  .confusion .cell strong { font-size: 22px; }
+}
+@media (max-width: 680px) {
+  .view-tabs { display: grid; grid-template-columns: 1fr 1fr; }
+  .view-tabs button { padding: 10px 8px; }
+}
