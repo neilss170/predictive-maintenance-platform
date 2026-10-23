@@ -18,6 +18,7 @@ Both models are served by one FastAPI service (packaged with Docker) and explore
 | Model | Test set | Result | Best baseline |
 |---|---|---|---|
 | Remaining useful life (gradient boosting) | 100 official FD001 test engines | **RMSE 12.85 cycles** (95% CI 10.6–15.0), MAE 9.06, NASA score 224 | Random forest 13.50 · ridge 17.04 · predicting the mean 43.07 |
+| 80% remaining-life range | Same 100 engines | **Held the true RUL for 89%** of engines; about ±4 cycles when 30 or fewer remain | — |
 | 30-cycle failure alarm (from the RUL model) | Same 100 engines, 25 due within 30 cycles | **Precision 0.96** (0.86–1.00), **recall 0.92** (0.79–1.00) | — |
 | Failure risk (random forest) | 1,500 held-out machines, 51 failures | **PR-AUC 0.957** (0.904–0.994), precision 0.957, recall 0.882 | Documented failure rules: precision 1.00, recall 0.92 |
 | Calibration (same classifier) | Same 1,500 machines | **Brier 0.0059** vs 0.0328 for predicting the base rate | — |
@@ -51,16 +52,27 @@ The ranges are 95% bootstrap intervals over test engines or machines. The test s
 
 ## Dashboard
 
-| Single machine | Fleet assessment | Engine RUL |
-|---|---|---|
-| ![Single machine](docs/screenshots/single-machine.png) | ![Fleet](docs/screenshots/fleet.png) | ![Engine RUL](docs/screenshots/engine-rul.png) |
+A one-minute guided tour (the **Tour** button) walks through the four views. ⓘ icons explain each metric in one sentence.
 
-- **Decision policy.** A slider sets how much worse a missed failure is than a false alarm. The review threshold, and every score on the page, update to match, with the held-out test outcome shown beside it.
-- **Single machine.** Adjust the operating readings, compare against a pinned scenario, and save assessments.
-- **Fleet assessment.** Upload up to 5,000 machines as CSV. Files with leakage columns are rejected and invalid rows are reported. Results can be filtered, sorted and exported. A [600-machine sample](dashboard/public/sample-fleet.csv) is included.
-- **Engine RUL.** Replay any of the 100 test engines cycle by cycle, with predicted and true RUL and the key sensors, and see the fleet ranked into severe, warning and healthy bands.
+| Single machine | Model performance |
+|---|---|
+| ![Single machine](docs/screenshots/single-machine.png) | ![Model performance](docs/screenshots/model-performance.png) |
+| **Fleet assessment** | **Engine RUL** |
+| ![Fleet](docs/screenshots/fleet.png) | ![Engine RUL](docs/screenshots/engine-rul.png) |
 
-The 500-tree forest is exported to JSON and scored in the browser. A parity check confirms the browser model matches scikit-learn to within 2e-16.
+- **Decision policy in rupees.** Enter what a missed failure and a false alarm cost, or pick a preset. The review threshold moves to the cheapest out-of-fold setting, and the panel shows missed failures, false alarms and the expected cost per 1,000 machines on the held-out test set.
+- **Single machine.** The score updates as you move a slider. One click loads a scenario for each failure type: healthy, overheating, power failure, overstrain and worn tool.
+  - *Why this score* lists each reading's contribution in percentage points. The contributions come from the forest's own decision paths and add up exactly to the probability.
+  - *What would clear it* finds the smallest single change, controllable readings first, that moves the machine across the threshold. **Try it** applies the change.
+  - A failure-rules check shows which of the dataset's documented failure conditions are close or triggered.
+- **Fleet assessment.** Upload up to 5,000 machines as CSV. Each row shows its main risk driver, and **Why?** expands the full reasons. Files with leakage columns are rejected and invalid rows are reported. Results can be filtered, sorted and exported. A [600-machine sample](dashboard/public/sample-fleet.csv) is included.
+- **Model performance.** All 1,500 held-out machines are re-scored in the browser:
+  - a confusion matrix and trade-off chart that follow the active threshold;
+  - catch rate by failure type;
+  - the model's actual mistakes, each with its reasons and a link to open it.
+- **Engine RUL.** Replay any of the 100 test engines cycle by cycle. Each forecast is shown with its 80% likely range, along with the key sensors and a maintenance queue sorted by urgency.
+
+The 500-tree forest is exported to JSON and scored in the browser. A parity check confirms the browser model matches scikit-learn to within 2e-16, and a test confirms the browser's test-set decisions match the Python report exactly.
 
 ## Architecture
 
@@ -152,6 +164,8 @@ tests/          Python tests (data, features, models, API)
 - **AI4I has no time or machine identity.** The split is stratified at random, not chronological or grouped by machine. This project also reset the split after earlier iterations had looked at the data, so the test set is "sealed since the reset", not truly external.
 - **The rules beat the model on AI4I.** On real equipment no such formula exists. Here it is an upper bound, showing the forest recovers most of the structure, not a competitor to deploy.
 - **The RUL model covers FD001 only:** one operating condition and one fault mode. The other C-MAPSS subsets (FD002–FD004) add operating regimes and a second fault mode, and would need regime normalisation.
-- **RUL predictions are capped at 125 cycles,** so a healthy engine reads "at least 125", and errors against uncapped truth grow for engines far from failure.
+- **RUL predictions are capped at 125 cycles,** so a healthy engine reads "at least 125", and errors against uncapped truth grow for engines far from failure. For the same reason the likely range is wide for healthy engines (roughly −18 to +85 cycles) and tight near failure.
+- **The RUL range was checked on the test set twice.** It comes from out-of-fold training errors. It was first built with step buckets (85% test coverage), then switched to interpolating between bucket centres so the chart reads smoothly (89%). That change was made for display, but the test result was seen both times.
+- **Reasons describe the model, not physics.** The per-reading contributions explain why the forest scored a machine the way it did. The "what would clear it" changes are what the model responds to, not tested repair procedures.
 - **Mid-range failure probabilities are poorly calibrated.** Overall calibration is good (expected calibration error 0.017), but few machines fall between 0.2 and 0.6, and those bins are noisy. Read scores there as a ranking, not a probability.
 - **The costs are relative.** The slider assumes you can put a ratio on a missed failure versus a false alarm. The real ratio has to come from the maintenance owner.
