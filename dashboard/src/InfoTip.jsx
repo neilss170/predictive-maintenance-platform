@@ -25,7 +25,8 @@ export function InfoTip({ term, label = "What does this mean?" }) {
     <span className="info-tip" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button
         type="button" className="info-tip-button" aria-label={label} aria-describedby={open ? id : undefined}
-        aria-expanded={open} onClick={() => setOpen((value) => !value)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        aria-expanded={open} onClick={() => setOpen(true)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
       >i</button>
       {open && <span role="tooltip" id={id} className="info-tip-bubble">{GLOSSARY[term]}</span>}
     </span>
