@@ -205,7 +205,8 @@ export function EngineRul() {
               <thead><tr><th>Engine</th><th>Pred.</th><th>True</th><th>Band</th></tr></thead>
               <tbody>
                 {visible.map((row) => (
-                  <tr key={row.unit} className={row.unit === engine.unit ? "selected" : ""} onClick={() => setUnit(row.unit)}>
+                  <tr key={row.unit} className={row.unit === engine.unit ? "selected" : ""} onClick={() => setUnit(row.unit)}
+                    tabIndex={0} aria-selected={row.unit === engine.unit} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setUnit(row.unit); } }}>
                     <td><strong>#{row.unit}</strong></td>
                     <td>{row.predicted.toFixed(0)}</td>
                     <td>{row.actual}</td>

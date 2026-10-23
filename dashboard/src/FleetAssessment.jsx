@@ -131,7 +131,7 @@ export function FleetAssessment({ threshold, scoreInputs, explain, onOpenMachine
 
           <div className="table-scroll">
             <table className="priority-table">
-              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level <InfoTip label="What the levels mean" text={Object.entries(riskMeanings(threshold)).map(([level, meaning]) => `${level}: ${meaning}`).join("\n")} /></th><th>Main driver</th><th>Decision</th><th /></tr></thead>
+              <thead><tr><th>Machine</th><th>Type</th><th>Risk</th><th>Level <InfoTip label="What the levels mean" text={Object.entries(riskMeanings(threshold)).map(([level, meaning]) => `${level}: ${meaning}`).join("\n")} /></th><th>Main driver</th><th>Decision</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>{visibleRows.map((row) => (
                 <Fragment key={row.machineId}>
                   <tr className={expanded === row.machineId ? "expanded" : ""}>

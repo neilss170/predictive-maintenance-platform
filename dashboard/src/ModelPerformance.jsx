@@ -109,7 +109,7 @@ export function ModelPerformance({ model, threshold, onOpenMachine }) {
 
       <div className="perf-top">
         <div className="confusion" role="table" aria-label="Decisions against what really happened">
-          <div role="row" className="confusion-head"><span role="columnheader" /><span role="columnheader">Flagged for review</span><span role="columnheader">Not flagged</span></div>
+          <div role="row" className="confusion-head"><span role="columnheader"><span className="sr-only">Outcome</span></span><span role="columnheader">Flagged for review</span><span role="columnheader">Not flagged</span></div>
           <div role="row"><span role="rowheader">Really failed</span>
             <div role="cell" className="cell good"><strong>{counts.tp}</strong><small>caught</small></div>
             <div role="cell" className="cell bad"><strong>{counts.fn}</strong><small>missed</small></div>
@@ -156,7 +156,7 @@ export function ModelPerformance({ model, threshold, onOpenMachine }) {
         {shown.length === 0 ? <p className="empty-copy">None at this threshold.</p> : (
           <div className="table-scroll">
             <table className="priority-table">
-              <thead><tr><th>Machine</th><th>Type</th><th>Score</th><th>{tab === "missed" ? "Failure type" : "Outcome"}</th><th>Main driver</th><th /></tr></thead>
+              <thead><tr><th>Machine</th><th>Type</th><th>Score</th><th>{tab === "missed" ? "Failure type" : "Outcome"}</th><th>Main driver</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>{shown.map((machine) => (
                 <Fragment key={machine.id}>
                   <tr className={expanded === machine.id ? "expanded" : ""}>

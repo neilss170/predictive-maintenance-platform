@@ -274,7 +274,7 @@ export function App() {
             <p className="scoring-note">The 500-tree model scores in your browser as you move the sliders. Pin a result, change readings, and compare.</p>
           </form>
 
-          <aside className={`result-panel ${result?.flagged ? "flagged" : ""}`} data-tour="result">
+          <section className={`result-panel ${result?.flagged ? "flagged" : ""}`} data-tour="result" aria-label="Model result">
             {modelError ? (
               <div className="error-state"><p className="eyebrow">Model unavailable</p><h2>Risk score could not be loaded.</h2><p>{modelError}</p></div>
             ) : !result ? (
@@ -310,7 +310,7 @@ export function App() {
                 </div>
               </>
             )}
-          </aside>
+          </section>
         </section>
 
         <section className={`insight-grid ${view !== "single" ? "is-hidden" : ""}`}>
