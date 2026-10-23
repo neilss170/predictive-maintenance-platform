@@ -1,0 +1,190 @@
+{
+  "test_rows": 1500,
+  "test_failures": 51,
+  "model": {
+    "pr_auc": 0.956595290921827,
+    "roc_auc": 0.9842555379639779,
+    "brier": 0.005894707591879249,
+    "brier_base_rate": 0.032844013840830445,
+    "threshold": 0.48330825410539285,
+    "precision": 0.9574468085106383,
+    "recall": 0.8823529411764706,
+    "f1": 0.9183673469387755,
+    "flagged": 47,
+    "missed_failures": 6,
+    "false_alarms": 2
+  },
+  "model_95ci": {
+    "pr_auc": [
+      0.9040736614740718,
+      0.9938864956885902
+    ],
+    "roc_auc": [
+      0.9495012591070794,
+      0.9997663127055373
+    ],
+    "precision": [
+      0.8863636363636364,
+      1.0
+    ],
+    "recall": [
+      0.7817727272727273,
+      0.96
+    ],
+    "f1": [
+      0.851063829787234,
+      0.9682539682539683
+    ],
+    "brier": [
+      0.003935026179230564,
+      0.008553654453963767
+    ]
+  },
+  "rule_baseline": {
+    "deterministic_rules": {
+      "precision": 1.0,
+      "recall": 0.9215686274509803,
+      "f1": 0.9591836734693877,
+      "flagged": 47,
+      "missed_failures": 4,
+      "false_alarms": 0
+    },
+    "rules_plus_tool_wear_200": {
+      "precision": 0.32051282051282054,
+      "recall": 0.9803921568627451,
+      "f1": 0.4830917874396135,
+      "flagged": 156,
+      "missed_failures": 1,
+      "false_alarms": 106
+    }
+  },
+  "recall_by_failure_mode": {
+    "TWF": {
+      "failures": 3,
+      "caught": 0
+    },
+    "HDF": {
+      "failures": 17,
+      "caught": 15
+    },
+    "PWF": {
+      "failures": 20,
+      "caught": 20
+    },
+    "OSF": {
+      "failures": 12,
+      "caught": 12
+    },
+    "RNF": {
+      "failures": 0,
+      "caught": 0
+    }
+  },
+  "shap": {
+    "mean_abs_shap": {
+      "Rotational speed [rpm]": 0.10601,
+      "Mechanical power [W]": 0.09445,
+      "Torque [Nm]": 0.07967,
+      "Torque \u00d7 tool wear": 0.07348,
+      "Temperature difference [K]": 0.06959,
+      "Tool wear [min]": 0.06293,
+      "Air temperature [K]": 0.02795,
+      "Process temperature [K]": 0.01659,
+      "Type_L": 0.00344,
+      "Type_M": 0.0029,
+      "Type_H": 0.00122
+    },
+    "rule_side_mean_shap": {
+      "Temperature difference [K]": {
+        "failing_side": 0.07112,
+        "safe_side": -0.06888,
+        "machines_on_failing_side": 112
+      },
+      "Rotational speed [rpm]": {
+        "failing_side": 0.0846,
+        "safe_side": -0.10778,
+        "machines_on_failing_side": 215
+      },
+      "Mechanical power [W]": {
+        "failing_side": 0.25182,
+        "safe_side": -0.09199,
+        "machines_on_failing_side": 20
+      },
+      "Torque \u00d7 tool wear": {
+        "failing_side": 0.22777,
+        "safe_side": -0.07217,
+        "machines_on_failing_side": 12
+      }
+    }
+  },
+  "calibration": {
+    "mean_predicted_test": 0.0394412298153119,
+    "observed_rate_test": 0.034,
+    "brier_oof": 0.009344285127529588,
+    "ece_test": 0.016893184010789493,
+    "ece_oof": 0.012935353430578875
+  },
+  "cost_thresholds": [
+    {
+      "ratio": 1,
+      "threshold": 0.4935,
+      "flagged": 45,
+      "missed_failures": 7,
+      "false_alarms": 1,
+      "precision": 0.9778,
+      "recall": 0.8627,
+      "test_cost": 8
+    },
+    {
+      "ratio": 5,
+      "threshold": 0.4035,
+      "flagged": 49,
+      "missed_failures": 4,
+      "false_alarms": 2,
+      "precision": 0.9592,
+      "recall": 0.9216,
+      "test_cost": 22
+    },
+    {
+      "ratio": 10,
+      "threshold": 0.3799,
+      "flagged": 49,
+      "missed_failures": 4,
+      "false_alarms": 2,
+      "precision": 0.9592,
+      "recall": 0.9216,
+      "test_cost": 42
+    },
+    {
+      "ratio": 20,
+      "threshold": 0.3799,
+      "flagged": 49,
+      "missed_failures": 4,
+      "false_alarms": 2,
+      "precision": 0.9592,
+      "recall": 0.9216,
+      "test_cost": 82
+    },
+    {
+      "ratio": 50,
+      "threshold": 0.0326,
+      "flagged": 203,
+      "missed_failures": 1,
+      "false_alarms": 153,
+      "precision": 0.2463,
+      "recall": 0.9804,
+      "test_cost": 203
+    },
+    {
+      "ratio": 100,
+      "threshold": 0.0156,
+      "flagged": 267,
+      "missed_failures": 1,
+      "false_alarms": 217,
+      "precision": 0.1873,
+      "recall": 0.9804,
+      "test_cost": 317
+    }
+  ],
+  "threshold_selection": "minimum ratio x missed + false alarms on out-of-fold development predictions"
+}
